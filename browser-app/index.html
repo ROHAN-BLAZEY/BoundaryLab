@@ -43,6 +43,8 @@
         <button id="undo" class="button secondary compact" type="button" disabled title="Undo (Ctrl or Command + Z)">↶ Undo</button>
         <button id="redo" class="button secondary compact" type="button" disabled title="Redo">↷ Redo</button>
         <button id="reset" class="button secondary compact" type="button" disabled>Clear image</button>
+      <button id="saveToGallery" class="button secondary compact" type="button" disabled>Save to gallery</button>
+      <button id="galleryButton" class="button secondary compact" type="button">Gallery <span id="galleryCount">0</span></button>
         <details class="export-menu">
           <summary class="button primary compact">Export <span aria-hidden="true">▾</span></summary>
           <div class="menu">
@@ -88,17 +90,24 @@
     <section class="controls-panel" aria-labelledby="controlsTitle">
       <div class="section-title controls-title"><div><span class="eyebrow">TUNE YOUR RESULT</span><h2 id="controlsTitle">Processing controls</h2></div><button id="defaults" class="text-button" type="button">Restore defaults</button></div>
       <div class="control-grid">
-        <label class="control-label">Output style<select id="style"><option value="outline">Classic outline</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label>
+        <label class="control-label">Output style<select id="style"><option value="outline">Color outline</option><option value="edge-map">Dark edge map</option><option value="overlay">Photo + edges</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label>
         <label class="control-label">Edge method<select id="edgeMethod"><option value="sobel">Sobel gradient</option><option value="canny">Canny-like</option><option value="laplacian">Laplacian</option></select></label>
-        <label class="range-label">Low threshold <output id="tval">70</output><input id="threshold" type="range" min="0" max="255" value="70"></label>
-        <label class="range-label">High threshold <output id="highVal">150</output><input id="highThreshold" type="range" min="0" max="255" value="150"></label>
+        <label class="range-label">Low threshold <output id="tval">28</output><input id="threshold" type="range" min="0" max="255" value="28"></label>
+        <label class="range-label">High threshold · Canny <output id="highVal">78</output><input id="highThreshold" type="range" min="0" max="255" value="78"></label>
         <label class="range-label">Noise smoothing <output id="nval">1</output><input id="cleanup" type="range" min="0" max="4" value="1"></label>
+        <label class="range-label">Edge thickness <output id="thicknessVal">1</output><input id="edgeThickness" type="range" min="1" max="5" value="1"></label>
+        <label class="range-label">Brightness <output id="brightnessVal">0</output><input id="brightness" type="range" min="-100" max="100" value="0"></label>
+        <label class="range-label">Contrast <output id="contrastVal">0</output><input id="contrast" type="range" min="-100" max="100" value="0"></label>
         <label class="range-label">Rotation <output id="rval">0°</output><input id="rotation" type="range" min="0" max="360" value="0"></label>
-        <label class="control-label">Edge color<select id="color"><option value="#33cbb0">Boundary teal</option><option value="#ff5bc8">Magenta</option><option value="#a5d94b">Lime</option><option value="#f0a63d">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label>
+        <label class="control-label">Edge color<select id="color"><option value="#087967">Boundary teal</option><option value="#ff5bc8">Magenta</option><option value="#a5d94b">Lime</option><option value="#f0a63d">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label>
         <label class="toggle-row"><span><b>Invert image</b><small>Swap light and dark</small></span><input id="invert" type="checkbox"></label>
-        <label class="toggle-row"><span><b>Preserve transparency</b><small>Keep transparent areas clear</small></span><input id="transparent" type="checkbox"></label>
+        <label class="toggle-row"><span><b>Transparent background</b><small>Keep empty edge areas clear</small></span><input id="transparent" type="checkbox"></label>
       </div>
       <div class="control-footer"><span id="processingStatus" role="status">Ready</span><span><kbd>Ctrl/⌘ Z</kbd> Undo · <kbd>Ctrl/⌘ O</kbd> Open · <kbd>Ctrl/⌘ S</kbd> Export</span></div>
+    </section>
+    <section class="about-card" aria-labelledby="aboutTitle">
+      <div><span class="eyebrow">ABOUT BOUNDARYLAB</span><h2 id="aboutTitle">Every image has a story in its edges.</h2><p>We built BoundaryLab for people who love looking closer. Uncover shapes, textures, and hidden structure, then turn those discoveries into crisp visuals. Experiment freely, fine-tune every line, and keep your images right on your device.</p></div>
+      <div class="about-values" aria-label="BoundaryLab values"><span>LOOK CLOSER</span><span>MAKE IT YOURS</span><span>STAY PRIVATE</span></div>
     </section>
     <footer><span>BoundaryLab Studio · Browser Edition</span><span>Images are processed locally on your device</span></footer>
   </main>
@@ -111,6 +120,18 @@
       <div id="modalContent"></div>
     </section>
   </div>
+  <div id="galleryModal" class="modal" hidden>
+    <button class="modal-backdrop" type="button" aria-label="Close saved gallery"></button>
+    <section class="modal-card gallery-card" role="dialog" aria-modal="true" aria-labelledby="galleryTitle" tabindex="-1">
+      <button class="modal-close" id="galleryClose" type="button" aria-label="Close saved gallery">×</button>
+      <p class="eyebrow">SAVED ON THIS DEVICE</p>
+      <h2 id="galleryTitle">Your gallery</h2>
+      <p class="gallery-intro">Keep useful images close at hand. Gallery items stay in this browser and are never uploaded.</p>
+      <p id="galleryStatus" class="gallery-status" role="status" aria-live="polite"></p>
+      <div id="galleryEmpty" class="gallery-empty"><span aria-hidden="true">▧</span><b>Your gallery is ready</b><small>Open an image and choose “Save to gallery” to keep it here.</small></div>
+      <div id="galleryGrid" class="gallery-grid"></div>
+    </section>
+  </div>
   <div id="guideModal" class="modal" hidden>
     <button class="modal-backdrop" type="button" aria-label="Close guide"></button>
     <section class="modal-card guide-card" role="dialog" aria-modal="true" aria-labelledby="guideTitle" tabindex="-1">
@@ -121,8 +142,8 @@
       <div class="guide-grid">
         <article><span>01</span><h3>Load an image</h3><p>Open an image, drop it into the page, try the sample, or capture one with your camera.</p></article>
         <article><span>02</span><h3>Compare three frames</h3><p>Color shows your original, Grayscale shows intensity, and Processed shows the selected output style.</p></article>
-        <article><span>03</span><h3>Tune the edges</h3><p>Choose Sobel, Canny-like, or Laplacian detection. Adjust thresholds, smoothing, rotation, and edge color.</p></article>
-        <article><span>04</span><h3>Save your result</h3><p>Export a PNG, JPEG, WebP, or SVG edge map. Use Undo and Redo to revisit recent control changes.</p></article>
+        <article><span>03</span><h3>Tune the edges</h3><p>Choose Sobel, Canny-like, or Laplacian detection. Adjust contrast, brightness, smoothing, thickness, rotation, and edge color.</p></article>
+        <article><span>04</span><h3>Save your work</h3><p>Keep images in your private on-device gallery, then export a PNG, JPEG, WebP, or SVG edge map. Undo and Redo revisit recent changes.</p></article>
       </div>
       <div class="guide-footer"><div><b>Private by design</b><p>Images are processed on this device and are not uploaded by the browser workspace.</p></div><div class="guide-shortcuts"><b>Shortcuts</b><p><kbd>Ctrl/⌘ O</kbd> Open · <kbd>Ctrl/⌘ S</kbd> Export · <kbd>Ctrl/⌘ Z</kbd> Undo</p></div></div>
       <button id="guideDone" class="button primary guide-done" type="button">Back to workspace</button>

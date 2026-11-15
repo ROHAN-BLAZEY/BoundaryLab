@@ -10,6 +10,8 @@
   const resultCtx = result.getContext('2d');
   const MAX_SIDE = 960;
   const worker = new Worker('./processor-worker.js');
+  const GALLERY_DB = 'boundarylab-local-gallery';
+  const GALLERY_STORE = 'images';
 
   let basePixels = null;
   let baseW = 0;
@@ -23,12 +25,17 @@
   let lastOutput = null;
   let lastEdge = null;
   let comparing = false;
+  let processing = false;
   let lastFocused = null;
   let fileLoadToken = 0;
+  let currentAsset = null;
+  let galleryDbPromise = null;
+  let galleryObjectUrls = [];
 
   const defaults = {
-    style: 'outline', edgeMethod: 'sobel', low: 70, high: 150,
-    cleanup: 1, rotation: 0, color: '#33cbb0', invert: false, transparent: false,
+    style: 'outline', edgeMethod: 'canny', low: 28, high: 78,
+    cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 0,
+    rotation: 0, color: '#087967', invert: false, transparent: false,
   };
   const settings = { ...defaults };
 
@@ -51,6 +58,9 @@
       threshold: settings.low,
       highThreshold: settings.high,
       cleanup: settings.cleanup,
+      edgeThickness: settings.edgeThickness,
+      brightness: settings.brightness,
+      contrast: settings.contrast,
       rotation: settings.rotation,
       color: settings.color,
       invert: settings.invert,
@@ -64,6 +74,9 @@
     $('#tval').textContent = settings.low;
     $('#highVal').textContent = settings.high;
     $('#nval').textContent = settings.cleanup;
+    $('#thicknessVal').textContent = settings.edgeThickness;
+    $('#brightnessVal').textContent = settings.brightness;
+    $('#contrastVal').textContent = settings.contrast;
     $('#rval').textContent = settings.rotation + '°';
   }
 
@@ -125,6 +138,8 @@
   function render() {
     if (!basePixels) return;
     sync();
+    processing = true;
+    $('#saveToGallery').disabled = true;
     status('Processing…');
     const id = ++sequence;
     const rotated = rotateSource();
@@ -138,6 +153,8 @@
       }, [rotated.pixels.buffer]);
     } catch (error) {
       console.error(error);
+      processing = false;
+      $('#saveToGallery').disabled = !currentAsset || !lastOutput;
       status('Could not process image');
       toast('Image processing could not start');
     }
@@ -146,11 +163,13 @@
   worker.onmessage = ({ data }) => {
     if (data.id !== sequence) return;
     const { width, height, gray, edge, output } = data;
+    processing = false;
     drawGray(grayCanvas, grayCtx, width, height, gray);
     setCanvasSize(result, width, height);
     resultCtx.putImageData(new ImageData(output, width, height), 0, 0);
     lastOutput = output;
     lastEdge = edge;
+    $('#saveToGallery').disabled = false;
     $('#grayPlaceholder').hidden = true;
     $('#resultPlaceholder').hidden = true;
     $('#dimensions').textContent = `${width} × ${height}`;
@@ -159,6 +178,8 @@
 
   worker.onerror = (error) => {
     console.error(error);
+    processing = false;
+    $('#saveToGallery').disabled = !currentAsset || !lastOutput;
     status('Processing error');
     toast('The image processor encountered an error');
   };
@@ -168,11 +189,12 @@
     debounce = setTimeout(render, 90);
   }
 
-  function loadFile(file) {
+  function loadFile(file, presetSettings = null) {
     if (!file) return;
     if (file.size > 30 * 1024 * 1024) return toast('Image exceeds the 30 MB limit');
     if (!file.type.startsWith('image/')) return toast('Choose an image file');
 
+    $('#file').value = '';
     const token = ++fileLoadToken;
     const url = URL.createObjectURL(file);
     const image = new Image();
@@ -186,6 +208,8 @@
       sourceCtx.drawImage(image, 0, 0, baseW, baseH);
       basePixels = sourceCtx.getImageData(0, 0, baseW, baseH).data;
       filename = file.name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '-') || 'boundarylab';
+      currentAsset = file;
+      if (presetSettings) Object.assign(settings, { ...defaults, ...presetSettings });
 
       sequence++;
       lastOutput = null;
@@ -201,8 +225,10 @@
       $('#grayPlaceholder').hidden = false;
       $('#resultPlaceholder').hidden = false;
       $('#reset').disabled = false;
+      $('#saveToGallery').disabled = true;
       history = [];
       historyIndex = -1;
+      sync();
       saveHistory();
       render();
       toast('Image opened locally');
@@ -223,6 +249,10 @@
 
   function closeModal(modal) {
     modal.hidden = true;
+    if (modal.id === 'galleryModal') {
+      galleryObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+      galleryObjectUrls = [];
+    }
     lastFocused?.focus?.();
   }
 
@@ -278,9 +308,162 @@
     result.toBlob((blob) => download(blob, name), `image/${type}`, 0.92);
   }
 
+  function openGalleryDatabase() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('Local browser storage is unavailable'));
+    if (!galleryDbPromise) {
+      galleryDbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(GALLERY_DB, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(GALLERY_STORE)) {
+            request.result.createObjectStore(GALLERY_STORE, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Could not open local gallery'));
+        request.onblocked = () => reject(new Error('The local gallery is open in another tab'));
+      });
+    }
+    return galleryDbPromise;
+  }
+
+  async function galleryRequest(mode, runRequest) {
+    const database = await openGalleryDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(GALLERY_STORE, mode);
+      const request = runRequest(transaction.objectStore(GALLERY_STORE));
+      let value;
+      request.onsuccess = () => { value = request.result; };
+      request.onerror = () => reject(request.error || new Error('Gallery request failed'));
+      transaction.oncomplete = () => resolve(value);
+      transaction.onerror = () => reject(transaction.error || new Error('Gallery transaction failed'));
+      transaction.onabort = () => reject(transaction.error || new Error('Gallery transaction was cancelled'));
+    });
+  }
+
+  function makeGalleryPreview() {
+    return new Promise((resolve) => {
+      const scale = Math.min(1, 320 / result.width, 240 / result.height);
+      const preview = document.createElement('canvas');
+      preview.width = Math.max(1, Math.round(result.width * scale));
+      preview.height = Math.max(1, Math.round(result.height * scale));
+      preview.getContext('2d').drawImage(result, 0, 0, preview.width, preview.height);
+      preview.toBlob(resolve, 'image/jpeg', 0.86);
+    });
+  }
+
+  async function saveCurrentToGallery() {
+    if (!currentAsset || !lastOutput) return toast('Wait for processing to finish before saving');
+    const saveButton = $('#saveToGallery');
+    const asset = currentAsset;
+    const name = $('#fileName').textContent;
+    const savedSettings = { ...settings };
+    saveButton.disabled = true;
+    try {
+      const preview = await makeGalleryPreview();
+      const sourceBlob = new Blob([asset], { type: asset.type || 'image/png' });
+      const item = {
+        id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name,
+        createdAt: Date.now(),
+        source: sourceBlob,
+        preview,
+        settings: savedSettings,
+      };
+      await galleryRequest('readwrite', (store) => store.put(item));
+      await refreshGalleryCount();
+      toast('Saved to this device’s gallery');
+      if (!$('#galleryModal').hidden) await renderGallery();
+    } catch (error) {
+      console.error(error);
+      toast('Could not save to the local gallery');
+      $('#galleryStatus').textContent = error.message;
+    } finally {
+      saveButton.disabled = !currentAsset || !lastOutput || processing;
+    }
+  }
+
+  async function refreshGalleryCount() {
+    try {
+      const items = await galleryRequest('readonly', (store) => store.getAll());
+      $('#galleryCount').textContent = items.length;
+    } catch (error) {
+      $('#galleryCount').textContent = '0';
+    }
+  }
+
+  async function renderGallery() {
+    const grid = $('#galleryGrid');
+    galleryObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+    galleryObjectUrls = [];
+    grid.replaceChildren();
+    const items = await galleryRequest('readonly', (store) => store.getAll());
+    items.sort((a, b) => b.createdAt - a.createdAt);
+    $('#galleryCount').textContent = items.length;
+    $('#galleryEmpty').hidden = items.length > 0;
+    $('#galleryStatus').textContent = items.length ? `${items.length} saved image${items.length === 1 ? '' : 's'} · stored on this device` : '';
+
+    for (const item of items) {
+      const card = document.createElement('article');
+      card.className = 'gallery-item';
+      const image = document.createElement('img');
+      image.alt = `Preview of ${item.name}`;
+      const imageUrl = URL.createObjectURL(item.preview || item.source);
+      galleryObjectUrls.push(imageUrl);
+      image.src = imageUrl;
+      const info = document.createElement('div');
+      info.className = 'gallery-item-info';
+      const title = document.createElement('b');
+      title.textContent = item.name;
+      const date = document.createElement('small');
+      date.textContent = new Date(item.createdAt).toLocaleString();
+      info.append(title, date);
+      const actions = document.createElement('div');
+      actions.className = 'gallery-item-actions';
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'button primary compact';
+      open.textContent = 'Open image';
+      open.addEventListener('click', () => {
+        const file = new File([item.source], item.name, { type: item.source.type || 'image/png' });
+        closeModal($('#galleryModal'));
+        loadFile(file, item.settings);
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'button secondary compact';
+      remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove ${item.name} from gallery`);
+      remove.addEventListener('click', async () => {
+        try {
+          await galleryRequest('readwrite', (store) => store.delete(item.id));
+          await renderGallery();
+        } catch (error) {
+          $('#galleryStatus').textContent = 'Could not remove this image from the gallery.';
+        }
+      });
+      actions.append(open, remove);
+      card.append(image, info, actions);
+      grid.append(card);
+    }
+  }
+
+  async function openGallery() {
+    openModal($('#galleryModal'), '#galleryClose');
+    $('#galleryStatus').textContent = 'Loading saved images…';
+    try {
+      await renderGallery();
+    } catch (error) {
+      $('#galleryEmpty').hidden = false;
+      $('#galleryGrid').replaceChildren();
+      $('#galleryStatus').textContent = 'Local gallery is not available in this browser session.';
+    }
+  }
+
   function clearImage() {
     fileLoadToken++;
     basePixels = null;
+    currentAsset = null;
+    processing = false;
     lastOutput = null;
     lastEdge = null;
     comparing = false;
@@ -299,6 +482,7 @@
     $('#fileName').textContent = 'No image loaded';
     $('#dimensions').textContent = '';
     $('#reset').disabled = true;
+    $('#saveToGallery').disabled = true;
     history = [];
     historyIndex = -1;
     updateHistoryButtons();
@@ -332,7 +516,8 @@
     element.addEventListener('input', () => {
       const settingById = {
         style: 'style', edgeMethod: 'edgeMethod', threshold: 'low', highThreshold: 'high',
-        cleanup: 'cleanup', rotation: 'rotation', color: 'color', invert: 'invert', transparent: 'transparent',
+        cleanup: 'cleanup', edgeThickness: 'edgeThickness', brightness: 'brightness', contrast: 'contrast',
+        rotation: 'rotation', color: 'color', invert: 'invert', transparent: 'transparent',
       };
       settings[settingById[element.id]] = element.type === 'checkbox'
         ? element.checked
@@ -344,6 +529,8 @@
 
   $('#defaults').addEventListener('click', resetAll);
   $('#reset').addEventListener('click', clearImage);
+  $('#saveToGallery').addEventListener('click', saveCurrentToGallery);
+  $('#galleryButton').addEventListener('click', openGallery);
   $('#undo').addEventListener('click', () => {
     if (historyIndex <= 0) return;
     historyIndex--;
@@ -366,6 +553,7 @@
   }));
 
   $('#modalClose').addEventListener('click', () => closeModal($('#modal')));
+  $('#galleryClose').addEventListener('click', () => closeModal($('#galleryModal')));
   $('#guideClose').addEventListener('click', () => closeModal($('#guideModal')));
   $('#guideDone').addEventListener('click', () => closeModal($('#guideModal')));
   $$('.modal-backdrop').forEach((backdrop) => backdrop.addEventListener('click', () => closeModal(backdrop.parentElement)));
@@ -461,6 +649,7 @@
       (event.shiftKey ? $('#redo') : $('#undo')).click();
     }
     if (event.key === 'Escape') {
+      if (!$('#galleryModal').hidden) closeModal($('#galleryModal'));
       if (!$('#guideModal').hidden) closeModal($('#guideModal'));
       if (!$('#modal').hidden) closeModal($('#modal'));
     }
@@ -478,4 +667,5 @@
   }
   sync();
   updateHistoryButtons();
+  refreshGalleryCount();
 })();

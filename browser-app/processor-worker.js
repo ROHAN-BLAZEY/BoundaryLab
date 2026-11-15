@@ -10,6 +10,17 @@ function makeGrayscale(pixels, count) {
   return gray;
 }
 
+function adjustGrayscale(gray, settings) {
+  const brightness = Math.max(-100, Math.min(100, Number(settings.brightness) || 0)) * 2.55;
+  const contrast = Math.max(-100, Math.min(100, Number(settings.contrast) || 0));
+  const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+  const adjusted = new Uint8Array(gray.length);
+  for (let i = 0; i < gray.length; i++) {
+    adjusted[i] = Math.max(0, Math.min(255, Math.round(factor * (gray[i] - 128) + 128 + brightness)));
+  }
+  return adjusted;
+}
+
 function smooth(gray, width, height, passes) {
   let current = gray;
   for (let pass = 0; pass < passes; pass++) {
@@ -82,10 +93,10 @@ function hysteresis(thin, width, height, low, high) {
   let tail = 0;
 
   for (let i = 0; i < thin.length; i++) {
-    if (thin[i] >= high) {
+    if (thin[i] > 0 && thin[i] >= high) {
       edge[i] = 255;
       queue[tail++] = i;
-    } else if (thin[i] >= low) {
+    } else if (thin[i] > 0 && thin[i] >= low) {
       edge[i] = 128;
     }
   }
@@ -122,7 +133,7 @@ function detectEdges(gray, width, height, settings) {
       for (let x = 1; x < width - 1; x++) {
         const i = y * width + x;
         const response = Math.abs(4 * gray[i] - gray[i - 1] - gray[i + 1] - gray[i - width] - gray[i + width]) / 4;
-        if (response >= low) edge[i] = 255;
+        if (response > 0 && response >= low) edge[i] = 255;
       }
     }
     return edge;
@@ -131,18 +142,47 @@ function detectEdges(gray, width, height, settings) {
   const { magnitude, direction } = sobelMagnitude(gray, width, height);
   const thin = thinEdges(magnitude, direction, width, height);
   if (settings.edgeMethod === 'canny') return hysteresis(thin, width, height, low, high);
-  for (let i = 0; i < thin.length; i++) if (thin[i] >= low) edge[i] = 255;
+  for (let i = 0; i < thin.length; i++) if (thin[i] > 0 && thin[i] >= low) edge[i] = 255;
   return edge;
 }
 
+function thickenEdges(edge, width, height, thickness) {
+  let current = edge;
+  const passes = Math.max(0, Math.min(4, Number(thickness) - 1));
+  for (let pass = 0; pass < passes; pass++) {
+    const next = current.slice();
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = y * width + x;
+        if (!current[index]) continue;
+        for (let dy = -1; dy <= 1; dy++) {
+          const nearY = y + dy;
+          if (nearY < 0 || nearY >= height) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const nearX = x + dx;
+            if (nearX >= 0 && nearX < width) next[nearY * width + nearX] = 255;
+          }
+        }
+      }
+    }
+    current = next;
+  }
+  return current;
+}
+
 function colorFromHex(hex) {
-  const digits = String(hex || '#33cbb0').slice(1);
+  const digits = String(hex || '#087967').slice(1);
   return [0, 2, 4].map((offset) => Number.parseInt(digits.slice(offset, offset + 2), 16) || 0);
 }
 
 function makeOutput(pixels, gray, edge, width, height, settings) {
   const rgb = colorFromHex(settings.color);
   const output = new Uint8ClampedArray(width * height * 4);
+  const transparentBackgroundStyles = new Set(['outline', 'edge-map', 'blueprint', 'neon', 'coloring']);
+  const contrast = Math.max(-100, Math.min(100, Number(settings.contrast) || 0));
+  const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+  const brightness = Math.max(-100, Math.min(100, Number(settings.brightness) || 0)) * 2.55;
+  const adjustChannel = (value) => Math.max(0, Math.min(255, Math.round(contrastFactor * (value - 128) + 128 + brightness)));
   for (let pixel = 0, offset = 0; pixel < gray.length; pixel++, offset += 4) {
     const isEdge = edge[pixel] !== 0;
     let red = 0;
@@ -169,15 +209,23 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
         blue = isEdge ? rgb[2] : 13;
         break;
       case 'coloring':
-        red = isEdge ? rgb[0] : 255;
-        green = isEdge ? rgb[1] : 255;
-        blue = isEdge ? rgb[2] : 255;
+        red = green = blue = isEdge ? 20 : 255;
         break;
-      case 'outline':
-      default:
+      case 'edge-map':
         red = isEdge ? rgb[0] : 8;
         green = isEdge ? rgb[1] : 13;
         blue = isEdge ? rgb[2] : 14;
+        break;
+      case 'overlay':
+        red = isEdge ? rgb[0] : adjustChannel(pixels[offset]);
+        green = isEdge ? rgb[1] : adjustChannel(pixels[offset + 1]);
+        blue = isEdge ? rgb[2] : adjustChannel(pixels[offset + 2]);
+        break;
+      case 'outline':
+      default:
+        red = isEdge ? rgb[0] : 255;
+        green = isEdge ? rgb[1] : 255;
+        blue = isEdge ? rgb[2] : 255;
         break;
     }
 
@@ -189,7 +237,9 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
     output[offset] = red;
     output[offset + 1] = green;
     output[offset + 2] = blue;
-    output[offset + 3] = settings.transparent ? pixels[offset + 3] : 255;
+    let alpha = settings.transparent ? pixels[offset + 3] : 255;
+    if (settings.transparent && !isEdge && transparentBackgroundStyles.has(settings.style)) alpha = 0;
+    output[offset + 3] = alpha;
   }
   return output;
 }
@@ -198,8 +248,10 @@ self.onmessage = ({ data: job }) => {
   const { id, pixels: pixelBuffer, width, height, settings } = job;
   const pixels = new Uint8ClampedArray(pixelBuffer);
   const gray = makeGrayscale(pixels, width * height);
-  const smoothed = smooth(gray, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
-  const edge = detectEdges(smoothed, width, height, settings);
-  const output = makeOutput(pixels, gray, edge, width, height, settings);
+  const adjusted = adjustGrayscale(gray, settings);
+  const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
+  const detected = detectEdges(smoothed, width, height, settings);
+  const edge = thickenEdges(detected, width, height, settings.edgeThickness);
+  const output = makeOutput(pixels, adjusted, edge, width, height, settings);
   self.postMessage({ id, width, height, gray, edge, output }, [gray.buffer, edge.buffer, output.buffer]);
 };
