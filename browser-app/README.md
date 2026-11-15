@@ -8,7 +8,7 @@ Serve this folder from a local web server, then open the served page in a modern
 
 ## Deploy to Vercel
 
-Import the repository into Vercel and set **Root Directory** to `browser-app`. Choose **Other** as the framework, leave the build command empty, and use `.` as the output directory. The package has no build step or third-party dependencies.
+The repository root includes `vercel.json`, which selects the static `browser-app` folder as the deployment output and skips the build step. Keep Vercel's **Root Directory** at the repository root for this configuration. Alternatively, set **Root Directory** to `browser-app`, choose **Other** as the framework, leave the build command empty, and set the output directory to `.`. The package has no build step or third-party dependencies.
 
 ## Features
 
