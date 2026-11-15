@@ -1,9 +1,133 @@
-﻿<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101719"><meta name="description" content="Private browser-based image processing studio"><title>BoundaryLab Studio — Browser Edition</title><link rel="stylesheet" href="style.css"></head>
-<body><header class="topbar"><a class="brand" href="#top"><span class="brand-mark">B</span><span><b>BoundaryLab</b><small>STUDIO · BROWSER EDITION</small></span></a><div class="header-actions"><span class="privacy-chip"><i></i>Local processing</span><button id="themeToggle" class="icon-button" aria-label="Toggle theme" title="Toggle theme">◐</button></div></header>
-<main id="top"><section class="hero"><div><p class="eyebrow">IMAGE PROCESSING WORKSPACE</p><h1>Make boundaries<br><em>stand out.</em></h1><p class="lead">Explore edges, tune controls, and export clean results. Your images stay on this device.</p><div class="hero-actions"><label class="button primary upload">Open image<input id="file" type="file" accept="image/*"></label><button id="sample" class="button secondary">Try sample</button><button id="camera" class="button secondary">Use camera</button></div><p class="micro">JPG · PNG · WebP · GIF first frame · up to 30 MB</p></div><div class="hero-art"><div class="art-ring"></div><div class="art-card"><span>LIVE PROCESSING</span><div class="art-lines"></div><b>Edge map <small>READY</small></b><div class="art-stats"><span>LOCAL</span><span>PRIVATE</span><span>FAST</span></div></div></div></section>
-<section class="toolbar"><div class="source-name"><span class="live-dot"></span><span id="fileName">No image loaded</span><span id="dimensions"></span></div><div class="tool-actions"><button id="undo" class="button secondary" disabled title="Undo">↶ Undo</button><button id="redo" class="button secondary" disabled title="Redo">↷ Redo</button><button id="reset" class="button secondary" disabled>Reset</button><details class="export-menu"><summary class="button primary">Export ▾</summary><div class="menu"><button data-export="png">PNG image</button><button data-export="jpeg">JPEG image</button><button data-export="webp">WebP image</button><button data-export="svg">SVG edge paths</button></div></details></div></section>
-<section class="view-grid"><article class="view-panel"><div class="panel-heading"><div><span class="eyebrow">01 · INPUT</span><h2>Color source</h2></div><button class="icon-button zoom" data-zoom="source" title="Fit image">⤢</button></div><div class="canvas-wrap"><canvas id="source"></canvas><div class="placeholder" id="sourcePlaceholder"><span>▧</span><b>Your image appears here</b><small>Open an image or drop one anywhere</small></div></div></article><article class="view-panel"><div class="panel-heading"><div><span class="eyebrow">02 · OUTPUT</span><h2>Processed result</h2></div><div class="view-actions"><button class="icon-button" id="compare" title="Hold to compare source">⇄</button><button class="icon-button zoom" data-zoom="result" title="Fit image">⤢</button></div></div><div class="canvas-wrap checker"><canvas id="result"></canvas><div class="placeholder" id="resultPlaceholder"><span>✳</span><b>Waiting for image</b><small>Choose an input to start processing</small></div></div></article></section>
-<section class="editor-grid"><aside class="controls-panel"><div class="section-title"><div><span class="eyebrow">TUNE YOUR RESULT</span><h2>Processing controls</h2></div><button id="defaults" class="text-button">Defaults</button></div><label class="control-label">Output style<select id="style"><option value="outline">Classic outline</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label><label class="control-label">Edge method<select id="edgeMethod"><option value="sobel">Sobel gradient</option><option value="canny">Canny-like</option><option value="laplacian">Laplacian</option></select></label><label class="range-label">Low threshold <output id="tval">70</output><input id="threshold" type="range" min="0" max="255" value="70"></label><label class="range-label">High threshold <output id="highVal">150</output><input id="highThreshold" type="range" min="0" max="255" value="150"></label><label class="range-label">Noise smoothing <output id="nval">1</output><input id="cleanup" type="range" min="0" max="4" value="1"></label><label class="range-label">Rotation <output id="rval">0°</output><input id="rotation" type="range" min="0" max="360" value="0"></label><label class="control-label">Neon color<select id="color"><option value="#33f6db">Arctic teal</option><option value="#ff35d3">Magenta</option><option value="#a5ff35">Lime</option><option value="#ffb52e">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label><label class="toggle-row"><span><b>Invert image</b><small>Swap foreground and background</small></span><input id="invert" type="checkbox"></label><label class="toggle-row"><span><b>Preserve transparency</b><small>Keep transparent source background</small></span><input id="transparent" type="checkbox"></label><div class="control-footer"><span id="processingStatus">Ready</span><kbd>Ctrl/⌘ Z</kbd></div></aside>
-<section class="stages-panel"><div class="section-title"><div><span class="eyebrow">PROCESSING PIPELINE</span><h2>Under the hood <small id="stageCount">0 stages</small></h2></div><select id="stageFilter" aria-label="Filter stages"><option value="all">All stages</option><option value="core">Core pipeline</option></select></div><div class="stage-grid" id="stages"><div class="stage-empty">Load an image to inspect the processing stages.</div></div></section></section>
-<section class="bottom-grid"><article class="info-card"><span class="eyebrow">SESSION</span><h2>Private by design</h2><p>Processing happens locally in your browser. Images are never uploaded by this package.</p><div class="info-tags"><span>NO SERVER</span><span>NO ACCOUNT</span><span>YOUR DEVICE</span></div></article><article class="info-card shortcuts"><span class="eyebrow">QUICK KEYS</span><h2>Work faster</h2><p><kbd>Ctrl/⌘ O</kbd> Open image <kbd>Ctrl/⌘ S</kbd> Export PNG <kbd>Ctrl/⌘ Z</kbd> Undo</p></article></section><footer><span>BoundaryLab Studio · Browser Edition</span><span>Images remain on your device</span></footer></main><div id="toast" class="toast" role="status"></div><div id="modal" class="modal" hidden><button class="modal-close" id="modalClose">×</button><div id="modalContent"></div></div><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101719">
+  <meta name="description" content="A private browser workspace for image boundary processing.">
+  <title>BoundaryLab Studio — Browser Edition</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="brandDashboard" class="brand" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Open the BoundaryLab guide">
+      <span class="brand-mark" aria-hidden="true">B</span>
+      <span><b>BoundaryLab</b><small>STUDIO · BROWSER EDITION</small></span>
+    </button>
+    <div class="header-actions">
+      <span class="privacy-chip"><i aria-hidden="true"></i>Local processing</span>
+      <button id="themeToggle" class="icon-button theme-button" type="button" aria-label="Switch to light theme" title="Switch to light theme">
+        <span id="themeIcon" aria-hidden="true">☼</span><span id="themeLabel">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">IMAGE PROCESSING WORKSPACE</p>
+        <h1 id="pageTitle">Make boundaries <em>stand out.</em></h1>
+        <p class="lead">Compare your original, grayscale, and processed image side by side. Your images stay on this device.</p>
+        <div class="hero-actions">
+          <label class="button primary upload">Open image<input id="file" type="file" accept="image/*"></label>
+          <button id="sample" class="button secondary" type="button">Try sample</button>
+          <button id="camera" class="button secondary" type="button">Use camera</button>
+        </div>
+        <p class="micro">JPG · PNG · WebP · GIF first frame · up to 30 MB</p>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Image actions">
+      <div class="source-name"><span class="live-dot" aria-hidden="true"></span><span id="fileName">No image loaded</span><span id="dimensions"></span></div>
+      <div class="tool-actions">
+        <button id="undo" class="button secondary compact" type="button" disabled title="Undo (Ctrl or Command + Z)">↶ Undo</button>
+        <button id="redo" class="button secondary compact" type="button" disabled title="Redo">↷ Redo</button>
+        <button id="reset" class="button secondary compact" type="button" disabled>Clear image</button>
+        <details class="export-menu">
+          <summary class="button primary compact">Export <span aria-hidden="true">▾</span></summary>
+          <div class="menu">
+            <button type="button" data-export="png">PNG image</button>
+            <button type="button" data-export="jpeg">JPEG image</button>
+            <button type="button" data-export="webp">WebP image</button>
+            <button type="button" data-export="svg">SVG edge paths</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="frames-section" aria-labelledby="framesTitle">
+      <div class="section-title frames-title">
+        <div><span class="eyebrow">YOUR IMAGE AT A GLANCE</span><h2 id="framesTitle">Frames</h2></div>
+        <p>Color, grayscale, and the result update together as you work.</p>
+      </div>
+      <div class="frame-grid">
+        <article class="frame-panel">
+          <div class="panel-heading"><div><span class="eyebrow">01 · ORIGINAL</span><h3>Color image</h3></div><button class="icon-button zoom" type="button" data-zoom="source" aria-label="Enlarge color image" title="Enlarge image">⤢</button></div>
+          <div class="canvas-wrap source-surface">
+            <canvas id="source" aria-label="Original color image"></canvas>
+            <div class="placeholder" id="sourcePlaceholder"><span aria-hidden="true">▧</span><b>Your image appears here</b><small>Open an image or drop one anywhere</small></div>
+          </div>
+        </article>
+        <article class="frame-panel">
+          <div class="panel-heading"><div><span class="eyebrow">02 · INTENSITY</span><h3>Grayscale</h3></div><button class="icon-button zoom" type="button" data-zoom="gray" aria-label="Enlarge grayscale image" title="Enlarge image">⤢</button></div>
+          <div class="canvas-wrap gray-surface">
+            <canvas id="gray" aria-label="Grayscale image"></canvas>
+            <div class="placeholder" id="grayPlaceholder"><span aria-hidden="true">◒</span><b>Grayscale preview</b><small>It will appear after an image is loaded</small></div>
+          </div>
+        </article>
+        <article class="frame-panel">
+          <div class="panel-heading"><div><span class="eyebrow">03 · OUTPUT</span><h3>Processed image</h3></div><div class="view-actions"><button class="icon-button" id="compare" type="button" aria-label="Hold to compare original image" title="Hold to compare with original">⇄</button><button class="icon-button zoom" type="button" data-zoom="result" aria-label="Enlarge processed image" title="Enlarge image">⤢</button></div></div>
+          <div class="canvas-wrap checker">
+            <canvas id="result" aria-label="Processed image"></canvas>
+            <div class="placeholder" id="resultPlaceholder"><span aria-hidden="true">✳</span><b>Processed result</b><small>Choose an image to start processing</small></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="controls-panel" aria-labelledby="controlsTitle">
+      <div class="section-title controls-title"><div><span class="eyebrow">TUNE YOUR RESULT</span><h2 id="controlsTitle">Processing controls</h2></div><button id="defaults" class="text-button" type="button">Restore defaults</button></div>
+      <div class="control-grid">
+        <label class="control-label">Output style<select id="style"><option value="outline">Classic outline</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label>
+        <label class="control-label">Edge method<select id="edgeMethod"><option value="sobel">Sobel gradient</option><option value="canny">Canny-like</option><option value="laplacian">Laplacian</option></select></label>
+        <label class="range-label">Low threshold <output id="tval">70</output><input id="threshold" type="range" min="0" max="255" value="70"></label>
+        <label class="range-label">High threshold <output id="highVal">150</output><input id="highThreshold" type="range" min="0" max="255" value="150"></label>
+        <label class="range-label">Noise smoothing <output id="nval">1</output><input id="cleanup" type="range" min="0" max="4" value="1"></label>
+        <label class="range-label">Rotation <output id="rval">0°</output><input id="rotation" type="range" min="0" max="360" value="0"></label>
+        <label class="control-label">Edge color<select id="color"><option value="#33cbb0">Boundary teal</option><option value="#ff5bc8">Magenta</option><option value="#a5d94b">Lime</option><option value="#f0a63d">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label>
+        <label class="toggle-row"><span><b>Invert image</b><small>Swap light and dark</small></span><input id="invert" type="checkbox"></label>
+        <label class="toggle-row"><span><b>Preserve transparency</b><small>Keep transparent areas clear</small></span><input id="transparent" type="checkbox"></label>
+      </div>
+      <div class="control-footer"><span id="processingStatus" role="status">Ready</span><span><kbd>Ctrl/⌘ Z</kbd> Undo · <kbd>Ctrl/⌘ O</kbd> Open · <kbd>Ctrl/⌘ S</kbd> Export</span></div>
+    </section>
+    <footer><span>BoundaryLab Studio · Browser Edition</span><span>Images are processed locally on your device</span></footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal" class="modal" hidden>
+    <button class="modal-backdrop" type="button" aria-label="Close dialog"></button>
+    <section class="modal-card image-modal" role="dialog" aria-modal="true" aria-label="Image preview">
+      <button class="modal-close" id="modalClose" type="button" aria-label="Close preview">×</button>
+      <div id="modalContent"></div>
+    </section>
+  </div>
+  <div id="guideModal" class="modal" hidden>
+    <button class="modal-backdrop" type="button" aria-label="Close guide"></button>
+    <section class="modal-card guide-card" role="dialog" aria-modal="true" aria-labelledby="guideTitle" tabindex="-1">
+      <button class="modal-close" id="guideClose" type="button" aria-label="Close guide">×</button>
+      <p class="eyebrow">BOUNDARYLAB · WORKSPACE GUIDE</p>
+      <h2 id="guideTitle">Your image workspace</h2>
+      <p class="guide-intro">Explore image boundaries in a private, browser-based studio. Add an image, adjust the processing controls, then export the result.</p>
+      <div class="guide-grid">
+        <article><span>01</span><h3>Load an image</h3><p>Open an image, drop it into the page, try the sample, or capture one with your camera.</p></article>
+        <article><span>02</span><h3>Compare three frames</h3><p>Color shows your original, Grayscale shows intensity, and Processed shows the selected output style.</p></article>
+        <article><span>03</span><h3>Tune the edges</h3><p>Choose Sobel, Canny-like, or Laplacian detection. Adjust thresholds, smoothing, rotation, and edge color.</p></article>
+        <article><span>04</span><h3>Save your result</h3><p>Export a PNG, JPEG, WebP, or SVG edge map. Use Undo and Redo to revisit recent control changes.</p></article>
+      </div>
+      <div class="guide-footer"><div><b>Private by design</b><p>Images are processed on this device and are not uploaded by the browser workspace.</p></div><div class="guide-shortcuts"><b>Shortcuts</b><p><kbd>Ctrl/⌘ O</kbd> Open · <kbd>Ctrl/⌘ S</kbd> Export · <kbd>Ctrl/⌘ Z</kbd> Undo</p></div></div>
+      <button id="guideDone" class="button primary guide-done" type="button">Back to workspace</button>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,28 +1,481 @@
-﻿(()=>{
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], source=$('#source'), result=$('#result'), sourceCtx=source.getContext('2d',{willReadFrequently:true});
-const MAX_SIDE=960, worker=new Worker('./processor-worker.js');
-let basePixels=null, baseW=0, baseH=0, filename='boundarylab', sequence=0, debounce=0, toastTimer=0, history=[], historyIndex=-1, lastOutput=null;
-const settings={style:'outline',edgeMethod:'sobel',low:70,high:150,cleanup:1,rotation:0,color:'#33f6db',invert:false,transparent:false};
-function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200)}
-function status(text){$('#processingStatus').textContent=text}
-function sync(){for(const [id,value] of Object.entries({style:settings.style,edgeMethod:settings.edgeMethod,threshold:settings.low,highThreshold:settings.high,cleanup:settings.cleanup,rotation:settings.rotation,color:settings.color,invert:settings.invert,transparent:settings.transparent})){const el=$('#'+id);if(el)el.type==='checkbox'?el.checked=value:el.value=value}$('#tval').value=settings.low;$('#highVal').value=settings.high;$('#nval').value=settings.cleanup;$('#rval').value=settings.rotation+'°'}
-function saveHistory(){history=history.slice(0,historyIndex+1);history.push({...settings});if(history.length>40)history.shift();historyIndex=history.length-1;$('#undo').disabled=historyIndex<=0;$('#redo').disabled=true}
-function drawGray(canvas,w,h,data){canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d'),image=ctx.createImageData(w,h);for(let j=0,i=0;j<data.length;j++,i+=4){image.data[i]=image.data[i+1]=image.data[i+2]=data[j];image.data[i+3]=255;}ctx.putImageData(image,0,0)}
-function makeStage(name,caption,w,h,data,rgba=false){const card=document.createElement('button');card.type='button';card.className='stage-card';card.title='Click to enlarge '+name;const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;if(rgba){canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(data),w,h),0,0);}else drawGray(canvas,w,h,data);const title=document.createElement('b'),sub=document.createElement('small');title.textContent=name;sub.textContent=caption;card.append(canvas,title,sub);card.onclick=()=>showModal(name,canvas);$('#stages').append(card)}
-function rotateSource(){const degrees=+settings.rotation;if(!degrees)return{pixels:basePixels.slice(),width:baseW,height:baseH};const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a),w=Math.max(1,Math.ceil(Math.abs(baseW*c)+Math.abs(baseH*s))),h=Math.max(1,Math.ceil(Math.abs(baseH*c)+Math.abs(baseW*s))),canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const cx=canvas.getContext('2d');cx.translate(w/2,h/2);cx.rotate(a);const temp=document.createElement('canvas');temp.width=baseW;temp.height=baseH;temp.getContext('2d').putImageData(new ImageData(basePixels.slice(),baseW,baseH),0,0);cx.drawImage(temp,-baseW/2,-baseH/2);return{pixels:cx.getImageData(0,0,w,h).data,width:w,height:h}}
-function render(){if(!basePixels)return;sync();status('Processing…');const id=++sequence,rotated=rotateSource(),transfer=rotated.pixels.buffer;worker.postMessage({id,pixels:transfer,width:rotated.width,height:rotated.height,settings:{...settings}},[transfer]);}
-worker.onmessage=({data})=>{if(data.id!==sequence)return;const {width,height,gray,edge,output}=data;result.width=width;result.height=height;result.getContext('2d').putImageData(new ImageData(output,width,height),0,0);lastOutput=output;$('#resultPlaceholder').hidden=true;$('#stages').replaceChildren();makeStage('Grayscale','Intensity conversion',width,height,gray);makeStage('Contrast','Adjusted source view',width,height,gray);makeStage('Smoothing','Noise-reduced preview',width,height,gray);makeStage('Sobel gradient','Brightness changes',width,height,edge);makeStage('Threshold','Binary mask',width,height,edge);makeStage('Edge map','Selected detector',width,height,edge);makeStage('Morphology','Cleaned edges',width,height,edge);makeStage('Final output','Current style',width,height,output,true);$('#stageCount').textContent='8 stages';$('#dimensions').textContent=`${width} × ${height}`;status('Ready · processed in background');};
-function schedule(){clearTimeout(debounce);debounce=setTimeout(render,100)}
-function loadFile(file){if(!file)return;if(file.size>30*1024*1024)return toast('Image exceeds the 30 MB limit');if(!file.type.startsWith('image/'))return toast('Choose an image file');const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);const scale=Math.min(1,MAX_SIDE/img.width,MAX_SIDE/img.height),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));source.width=w;source.height=h;sourceCtx.drawImage(img,0,0,w,h);basePixels=sourceCtx.getImageData(0,0,w,h).data;baseW=w;baseH=h;filename=file.name.replace(/\.[^.]+$/,'')||'boundarylab';$('#fileName').textContent=file.name;$('#sourcePlaceholder').hidden=true;$('#resultPlaceholder').hidden=true;$('#reset').disabled=false;history=[];historyIndex=-1;saveHistory();render();toast('Image opened locally');};img.onerror=()=>{URL.revokeObjectURL(url);toast('Could not decode this image')};img.src=url;}
-function showModal(title,canvas){const box=$('#modalContent');box.replaceChildren();const label=document.createElement('p');label.textContent=title;const image=document.createElement('canvas');image.width=canvas.width;image.height=canvas.height;image.getContext('2d').drawImage(canvas,0,0);box.append(label,image);$('#modal').hidden=false;}
-function download(blob,name){if(!blob)return toast('Could not create export');const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Downloaded '+name);}
-function exportAs(type){if(!lastOutput)return toast('Open an image first');if(type==='svg'){const paths=[];for(let y=0;y<result.height;y++)for(let x=0;x<result.width;x++){const i=(y*result.width+x)*4;if(lastOutput[i]>220&&lastOutput[i+1]>220&&lastOutput[i+2]>220)paths.push(`M${x} ${y}h1v1h-1z`);}return download(new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${result.width} ${result.height}"><path fill="${settings.color}" d="${paths.join('')}"/></svg>`],{type:'image/svg+xml'}),filename+'.svg');}if(type==='jpeg'){const c=document.createElement('canvas');c.width=result.width;c.height=result.height;const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);cx.drawImage(result,0,0);return c.toBlob(b=>download(b,filename+'.jpg'),'image/jpeg',.9);}result.toBlob(b=>download(b,filename+'.'+type),`image/${type}`,.9);}
-function resetAll(){Object.assign(settings,{style:'outline',edgeMethod:'sobel',low:70,high:150,cleanup:1,rotation:0,color:'#33f6db',invert:false,transparent:false});saveHistory();render();}
-$('#file').onchange=e=>loadFile(e.target.files[0]);$$('.control-label select,.range-label input,.toggle-row input').forEach(el=>el.addEventListener('input',()=>{const map={style:'style',edgeMethod:'edgeMethod',threshold:'low',highThreshold:'high',cleanup:'cleanup',rotation:'rotation',color:'color',invert:'invert',transparent:'transparent'};settings[map[el.id]]=el.type==='checkbox'?el.checked:el.type==='range'?+el.value:el.value;saveHistory();schedule();}));
-$('#defaults').onclick=resetAll;$('#reset').onclick=()=>{basePixels=null;lastOutput=null;sequence++;$('#file').value='';source.width=result.width=1;$('#sourcePlaceholder').hidden=$('#resultPlaceholder').hidden=false;$('#stages').innerHTML='<div class="stage-empty">Load an image to inspect the processing stages.</div>';$('#stageCount').textContent='0 stages';$('#fileName').textContent='No image loaded';$('#dimensions').textContent='';$('#reset').disabled=true;$('#undo').disabled=$('#redo').disabled=true;history=[];historyIndex=-1;status('Ready');};
-$('#undo').onclick=()=>{if(historyIndex>0){historyIndex--;Object.assign(settings,history[historyIndex]);sync();$('#undo').disabled=historyIndex<=0;$('#redo').disabled=false;render();}};$('#redo').onclick=()=>{if(historyIndex<history.length-1){historyIndex++;Object.assign(settings,history[historyIndex]);sync();$('#redo').disabled=historyIndex>=history.length-1;$('#undo').disabled=false;render();}};$$('[data-export]').forEach(b=>b.onclick=()=>exportAs(b.dataset.export));$('#modalClose').onclick=()=>$('#modal').hidden=true;$('#modal').onclick=e=>{if(e.target===$('#modal'))$('#modal').hidden=true;};$$('.zoom').forEach(b=>b.onclick=()=>showModal(b.dataset.zoom==='source'?'Color source':'Processed result',b.dataset.zoom==='source'?source:result));
-let compareTimer=0;$('#compare').onpointerdown=()=>{if(!basePixels)return;clearTimeout(compareTimer);compareTimer=setTimeout(()=>{const c=document.createElement('canvas');c.width=baseW;c.height=baseH;c.getContext('2d').putImageData(new ImageData(basePixels.slice(),baseW,baseH),0,0);result.width=baseW;result.height=baseH;result.getContext('2d').drawImage(c,0,0,result.width,result.height);},0);};function stopCompare(){clearTimeout(compareTimer);if(basePixels)render();}$('#compare').onpointerup=stopCompare;$('#compare').onpointerleave=stopCompare;
-$('#sample').onclick=()=>{const c=document.createElement('canvas');c.width=640;c.height=420;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,640,420);g.addColorStop(0,'#d9e7e0');g.addColorStop(1,'#547d76');x.fillStyle=g;x.fillRect(0,0,640,420);x.fillStyle='#f2c76e';x.beginPath();x.arc(320,130,100,0,Math.PI*2);x.fill();x.fillStyle='#1a3030';x.beginPath();x.moveTo(220,130);x.lineTo(420,130);x.lineTo(320,380);x.closePath();x.fill();c.toBlob(b=>loadFile(new File([b],'sample-boundary.png',{type:'image/png'})));};
-$('#camera').onclick=async()=>{if(!navigator.mediaDevices?.getUserMedia||!isSecureContext)return toast('Camera needs a secure HTTPS page');try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}),video=document.createElement('video');video.srcObject=stream;await video.play();const c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;c.getContext('2d').drawImage(video,0,0);stream.getTracks().forEach(t=>t.stop());c.toBlob(b=>loadFile(new File([b],'camera-capture.png',{type:'image/png'})));}catch(e){toast(e.name==='NotAllowedError'?'Allow camera permission in browser settings':'Camera could not start');}};
-$('#themeToggle').onclick=()=>{document.body.classList.toggle('light');document.documentElement.style.colorScheme=document.body.classList.contains('light')?'light':'dark';};document.addEventListener('keydown',e=>{const mod=e.ctrlKey||e.metaKey;if(mod&&e.key.toLowerCase()==='o'){e.preventDefault();$('#file').click();}if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();exportAs('png');}if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();$('#undo').click();}if(e.key==='Escape')$('#modal').hidden=true;});document.addEventListener('dragover',e=>e.preventDefault());document.addEventListener('drop',e=>{e.preventDefault();loadFile(e.dataTransfer.files[0]);});$('#stageFilter').onchange=()=>$$('.stage-card').forEach((el,i)=>el.hidden=$('#stageFilter').value==='core'&&i>5);sync();
+(() => {
+  const $ = (selector) => document.querySelector(selector);
+  const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+  const source = $('#source');
+  const grayCanvas = $('#gray');
+  const result = $('#result');
+  const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+  const grayCtx = grayCanvas.getContext('2d');
+  const resultCtx = result.getContext('2d');
+  const MAX_SIDE = 960;
+  const worker = new Worker('./processor-worker.js');
+
+  let basePixels = null;
+  let baseW = 0;
+  let baseH = 0;
+  let filename = 'boundarylab';
+  let sequence = 0;
+  let debounce = 0;
+  let toastTimer = 0;
+  let history = [];
+  let historyIndex = -1;
+  let lastOutput = null;
+  let lastEdge = null;
+  let comparing = false;
+  let lastFocused = null;
+  let fileLoadToken = 0;
+
+  const defaults = {
+    style: 'outline', edgeMethod: 'sobel', low: 70, high: 150,
+    cleanup: 1, rotation: 0, color: '#33cbb0', invert: false, transparent: false,
+  };
+  const settings = { ...defaults };
+
+  function toast(message) {
+    const el = $('#toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  }
+
+  function status(message) {
+    $('#processingStatus').textContent = message;
+  }
+
+  function sync() {
+    const controls = {
+      style: settings.style,
+      edgeMethod: settings.edgeMethod,
+      threshold: settings.low,
+      highThreshold: settings.high,
+      cleanup: settings.cleanup,
+      rotation: settings.rotation,
+      color: settings.color,
+      invert: settings.invert,
+      transparent: settings.transparent,
+    };
+    for (const [id, value] of Object.entries(controls)) {
+      const element = $('#' + id);
+      if (element.type === 'checkbox') element.checked = value;
+      else element.value = value;
+    }
+    $('#tval').textContent = settings.low;
+    $('#highVal').textContent = settings.high;
+    $('#nval').textContent = settings.cleanup;
+    $('#rval').textContent = settings.rotation + '°';
+  }
+
+  function updateHistoryButtons() {
+    $('#undo').disabled = historyIndex <= 0;
+    $('#redo').disabled = historyIndex < 0 || historyIndex >= history.length - 1;
+  }
+
+  function saveHistory() {
+    history = history.slice(0, historyIndex + 1);
+    history.push({ ...settings });
+    if (history.length > 40) history.shift();
+    historyIndex = history.length - 1;
+    updateHistoryButtons();
+  }
+
+  function setCanvasSize(canvas, width, height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  function drawGray(canvas, context, width, height, values) {
+    setCanvasSize(canvas, width, height);
+    const image = context.createImageData(width, height);
+    for (let pixel = 0, offset = 0; pixel < values.length; pixel++, offset += 4) {
+      const value = values[pixel];
+      image.data[offset] = value;
+      image.data[offset + 1] = value;
+      image.data[offset + 2] = value;
+      image.data[offset + 3] = 255;
+    }
+    context.putImageData(image, 0, 0);
+  }
+
+  function rotateSource() {
+    const degrees = Number(settings.rotation);
+    if (!degrees) return { pixels: basePixels.slice(), width: baseW, height: baseH };
+
+    const angle = degrees * Math.PI / 180;
+    const cosine = Math.cos(angle);
+    const sine = Math.sin(angle);
+    const width = Math.max(1, Math.ceil(Math.abs(baseW * cosine) + Math.abs(baseH * sine)));
+    const height = Math.max(1, Math.ceil(Math.abs(baseH * cosine) + Math.abs(baseW * sine)));
+    const rotatedCanvas = document.createElement('canvas');
+    rotatedCanvas.width = width;
+    rotatedCanvas.height = height;
+    const rotatedContext = rotatedCanvas.getContext('2d', { willReadFrequently: true });
+    rotatedContext.translate(width / 2, height / 2);
+    rotatedContext.rotate(angle);
+
+    const original = document.createElement('canvas');
+    original.width = baseW;
+    original.height = baseH;
+    original.getContext('2d').putImageData(new ImageData(basePixels.slice(), baseW, baseH), 0, 0);
+    rotatedContext.drawImage(original, -baseW / 2, -baseH / 2);
+    return { pixels: rotatedContext.getImageData(0, 0, width, height).data, width, height };
+  }
+
+  function render() {
+    if (!basePixels) return;
+    sync();
+    status('Processing…');
+    const id = ++sequence;
+    const rotated = rotateSource();
+    try {
+      worker.postMessage({
+        id,
+        pixels: rotated.pixels.buffer,
+        width: rotated.width,
+        height: rotated.height,
+        settings: { ...settings },
+      }, [rotated.pixels.buffer]);
+    } catch (error) {
+      console.error(error);
+      status('Could not process image');
+      toast('Image processing could not start');
+    }
+  }
+
+  worker.onmessage = ({ data }) => {
+    if (data.id !== sequence) return;
+    const { width, height, gray, edge, output } = data;
+    drawGray(grayCanvas, grayCtx, width, height, gray);
+    setCanvasSize(result, width, height);
+    resultCtx.putImageData(new ImageData(output, width, height), 0, 0);
+    lastOutput = output;
+    lastEdge = edge;
+    $('#grayPlaceholder').hidden = true;
+    $('#resultPlaceholder').hidden = true;
+    $('#dimensions').textContent = `${width} × ${height}`;
+    status(`Ready · ${width} × ${height}`);
+  };
+
+  worker.onerror = (error) => {
+    console.error(error);
+    status('Processing error');
+    toast('The image processor encountered an error');
+  };
+
+  function schedule() {
+    clearTimeout(debounce);
+    debounce = setTimeout(render, 90);
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    if (file.size > 30 * 1024 * 1024) return toast('Image exceeds the 30 MB limit');
+    if (!file.type.startsWith('image/')) return toast('Choose an image file');
+
+    const token = ++fileLoadToken;
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      if (token !== fileLoadToken) return;
+      const scale = Math.min(1, MAX_SIDE / image.width, MAX_SIDE / image.height);
+      baseW = Math.max(1, Math.round(image.width * scale));
+      baseH = Math.max(1, Math.round(image.height * scale));
+      setCanvasSize(source, baseW, baseH);
+      sourceCtx.drawImage(image, 0, 0, baseW, baseH);
+      basePixels = sourceCtx.getImageData(0, 0, baseW, baseH).data;
+      filename = file.name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '-') || 'boundarylab';
+
+      sequence++;
+      lastOutput = null;
+      lastEdge = null;
+      setCanvasSize(grayCanvas, 1, 1);
+      setCanvasSize(result, 1, 1);
+      $('#fileName').textContent = file.name;
+      $('#sourcePlaceholder').hidden = true;
+      $('#grayPlaceholder').querySelector('b').textContent = 'Preparing grayscale…';
+      $('#grayPlaceholder').querySelector('small').textContent = 'Updating from source image';
+      $('#resultPlaceholder').querySelector('b').textContent = 'Processing image…';
+      $('#resultPlaceholder').querySelector('small').textContent = 'Applying your selected controls';
+      $('#grayPlaceholder').hidden = false;
+      $('#resultPlaceholder').hidden = false;
+      $('#reset').disabled = false;
+      history = [];
+      historyIndex = -1;
+      saveHistory();
+      render();
+      toast('Image opened locally');
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      if (token !== fileLoadToken) return;
+      toast('Could not decode this image');
+    };
+    image.src = url;
+  }
+
+  function openModal(modal, focusSelector) {
+    lastFocused = document.activeElement;
+    modal.hidden = false;
+    modal.querySelector(focusSelector)?.focus();
+  }
+
+  function closeModal(modal) {
+    modal.hidden = true;
+    lastFocused?.focus?.();
+  }
+
+  function showCanvasModal(title, canvas) {
+    const box = $('#modalContent');
+    box.replaceChildren();
+    const heading = document.createElement('p');
+    heading.className = 'eyebrow';
+    heading.textContent = title;
+    const image = document.createElement('canvas');
+    image.width = canvas.width;
+    image.height = canvas.height;
+    image.getContext('2d').drawImage(canvas, 0, 0);
+    box.append(heading, image);
+    openModal($('#modal'), '#modalClose');
+  }
+
+  function download(blob, name) {
+    if (!blob) return toast('Could not create export');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    toast('Downloaded ' + name);
+  }
+
+  function exportAs(type) {
+    if (!lastOutput || !basePixels) return toast('Open an image first');
+    const name = filename + (type === 'jpeg' ? '.jpg' : '.' + type);
+
+    if (type === 'svg') {
+      const paths = [];
+      for (let y = 0; y < result.height; y++) {
+        for (let x = 0; x < result.width; x++) {
+          if (lastEdge[y * result.width + x]) paths.push(`M${x} ${y}h1v1h-1z`);
+        }
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${result.width} ${result.height}" width="${result.width}" height="${result.height}"><path fill="${settings.color}" d="${paths.join('')}"/></svg>`;
+      return download(new Blob([svg], { type: 'image/svg+xml' }), name);
+    }
+
+    if (type === 'jpeg') {
+      const canvas = document.createElement('canvas');
+      canvas.width = result.width;
+      canvas.height = result.height;
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#fff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(result, 0, 0);
+      return canvas.toBlob((blob) => download(blob, name), 'image/jpeg', 0.92);
+    }
+    result.toBlob((blob) => download(blob, name), `image/${type}`, 0.92);
+  }
+
+  function clearImage() {
+    fileLoadToken++;
+    basePixels = null;
+    lastOutput = null;
+    lastEdge = null;
+    comparing = false;
+    sequence++;
+    $('#file').value = '';
+    setCanvasSize(source, 1, 1);
+    setCanvasSize(grayCanvas, 1, 1);
+    setCanvasSize(result, 1, 1);
+    $('#sourcePlaceholder').hidden = false;
+    $('#grayPlaceholder').hidden = false;
+    $('#resultPlaceholder').hidden = false;
+    $('#grayPlaceholder').querySelector('b').textContent = 'Grayscale preview';
+    $('#grayPlaceholder').querySelector('small').textContent = 'It will appear after an image is loaded';
+    $('#resultPlaceholder').querySelector('b').textContent = 'Processed result';
+    $('#resultPlaceholder').querySelector('small').textContent = 'Choose an image to start processing';
+    $('#fileName').textContent = 'No image loaded';
+    $('#dimensions').textContent = '';
+    $('#reset').disabled = true;
+    history = [];
+    historyIndex = -1;
+    updateHistoryButtons();
+    status('Ready');
+  }
+
+  function resetAll() {
+    Object.assign(settings, defaults);
+    sync();
+    saveHistory();
+    render();
+  }
+
+  function setTheme(theme) {
+    const isLight = theme === 'light';
+    document.body.dataset.theme = isLight ? 'light' : 'dark';
+    document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
+    $('#themeIcon').textContent = isLight ? '☾' : '☼';
+    $('#themeLabel').textContent = isLight ? 'Dark' : 'Light';
+    $('#themeToggle').setAttribute('aria-label', `Switch to ${isLight ? 'dark' : 'light'} theme`);
+    $('#themeToggle').title = `Switch to ${isLight ? 'dark' : 'light'} theme`;
+    try { localStorage.setItem('boundarylab-theme', isLight ? 'light' : 'dark'); } catch { /* Storage can be disabled. */ }
+  }
+
+  function openGuide() {
+    openModal($('#guideModal'), '#guideClose');
+  }
+
+  $('#file').addEventListener('change', (event) => loadFile(event.target.files[0]));
+  $$('.control-label select, .range-label input, .toggle-row input').forEach((element) => {
+    element.addEventListener('input', () => {
+      const settingById = {
+        style: 'style', edgeMethod: 'edgeMethod', threshold: 'low', highThreshold: 'high',
+        cleanup: 'cleanup', rotation: 'rotation', color: 'color', invert: 'invert', transparent: 'transparent',
+      };
+      settings[settingById[element.id]] = element.type === 'checkbox'
+        ? element.checked
+        : element.type === 'range' ? Number(element.value) : element.value;
+      saveHistory();
+      schedule();
+    });
+  });
+
+  $('#defaults').addEventListener('click', resetAll);
+  $('#reset').addEventListener('click', clearImage);
+  $('#undo').addEventListener('click', () => {
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    Object.assign(settings, history[historyIndex]);
+    sync();
+    updateHistoryButtons();
+    render();
+  });
+  $('#redo').addEventListener('click', () => {
+    if (historyIndex >= history.length - 1) return;
+    historyIndex++;
+    Object.assign(settings, history[historyIndex]);
+    sync();
+    updateHistoryButtons();
+    render();
+  });
+  $$('[data-export]').forEach((button) => button.addEventListener('click', () => {
+    exportAs(button.dataset.export);
+    $('.export-menu').open = false;
+  }));
+
+  $('#modalClose').addEventListener('click', () => closeModal($('#modal')));
+  $('#guideClose').addEventListener('click', () => closeModal($('#guideModal')));
+  $('#guideDone').addEventListener('click', () => closeModal($('#guideModal')));
+  $$('.modal-backdrop').forEach((backdrop) => backdrop.addEventListener('click', () => closeModal(backdrop.parentElement)));
+  $('#brandDashboard').addEventListener('click', openGuide);
+  $$('.zoom').forEach((button) => button.addEventListener('click', () => {
+    const canvases = { source, gray: grayCanvas, result };
+    const titles = { source: 'Color image', gray: 'Grayscale', result: 'Processed image' };
+    showCanvasModal(titles[button.dataset.zoom], canvases[button.dataset.zoom]);
+  }));
+
+  $('#compare').addEventListener('pointerdown', (event) => {
+    if (!basePixels || !lastOutput) return;
+    event.preventDefault();
+    comparing = true;
+    setCanvasSize(result, baseW, baseH);
+    resultCtx.putImageData(new ImageData(basePixels.slice(), baseW, baseH), 0, 0);
+    $('#compare').classList.add('active');
+  });
+  function stopCompare() {
+    if (!comparing) return;
+    comparing = false;
+    $('#compare').classList.remove('active');
+    if (basePixels) render();
+  }
+  $('#compare').addEventListener('pointerup', stopCompare);
+  $('#compare').addEventListener('pointercancel', stopCompare);
+  document.addEventListener('pointerup', stopCompare);
+  document.addEventListener('pointercancel', stopCompare);
+
+  $('#sample').addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 420;
+    const context = canvas.getContext('2d');
+    const gradient = context.createLinearGradient(0, 0, 640, 420);
+    gradient.addColorStop(0, '#d9e7e0');
+    gradient.addColorStop(1, '#547d76');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 640, 420);
+    context.fillStyle = '#f2c76e';
+    context.beginPath();
+    context.arc(320, 130, 100, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#1a3030';
+    context.beginPath();
+    context.moveTo(220, 130);
+    context.lineTo(420, 130);
+    context.lineTo(320, 380);
+    context.closePath();
+    context.fill();
+    canvas.toBlob((blob) => {
+      if (blob) loadFile(new File([blob], 'sample-boundary.png', { type: 'image/png' }));
+    });
+  });
+
+  $('#camera').addEventListener('click', async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !isSecureContext) return toast('Camera needs a secure HTTPS page');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      await video.play();
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) loadFile(new File([blob], 'camera-capture.png', { type: 'image/png' }));
+      });
+    } catch (error) {
+      toast(error.name === 'NotAllowedError' ? 'Allow camera permission in browser settings' : 'Camera could not start');
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop());
+    }
+  });
+
+  $('#themeToggle').addEventListener('click', () => {
+    setTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+  document.addEventListener('keydown', (event) => {
+    const modifier = event.ctrlKey || event.metaKey;
+    if (modifier && event.key.toLowerCase() === 'o') {
+      event.preventDefault();
+      $('#file').click();
+    }
+    if (modifier && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      exportAs('png');
+    }
+    if (modifier && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      (event.shiftKey ? $('#redo') : $('#undo')).click();
+    }
+    if (event.key === 'Escape') {
+      if (!$('#guideModal').hidden) closeModal($('#guideModal'));
+      if (!$('#modal').hidden) closeModal($('#modal'));
+    }
+  });
+  document.addEventListener('dragover', (event) => event.preventDefault());
+  document.addEventListener('drop', (event) => {
+    event.preventDefault();
+    loadFile(event.dataTransfer.files[0]);
+  });
+
+  try {
+    setTheme(localStorage.getItem('boundarylab-theme') || 'dark');
+  } catch {
+    setTheme('dark');
+  }
+  sync();
+  updateHistoryButtons();
 })();
