@@ -40,7 +40,7 @@
     <section class="toolbar" aria-label="Image actions">
       <div class="source-name"><span class="live-dot" aria-hidden="true"></span><span id="fileName">No image loaded</span><span id="dimensions"></span></div>
       <div class="tool-actions">
-        <button id="undo" class="button secondary compact" type="button" disabled title="Undo (Ctrl or Command + Z)">↶ Undo</button>
+        <button id="undo" class="button secondary compact" type="button" disabled title="Undo the last control change">↶ Undo</button>
         <button id="redo" class="button secondary compact" type="button" disabled title="Redo">↷ Redo</button>
         <button id="reset" class="button secondary compact" type="button" disabled>Clear image</button>
       <button id="saveToGallery" class="button secondary compact" type="button" disabled>Save to gallery</button>
@@ -103,11 +103,7 @@
         <label class="toggle-row"><span><b>Invert image</b><small>Swap light and dark</small></span><input id="invert" type="checkbox"></label>
         <label class="toggle-row"><span><b>Transparent background</b><small>Keep empty edge areas clear</small></span><input id="transparent" type="checkbox"></label>
       </div>
-      <div class="control-footer"><span id="processingStatus" role="status">Ready</span><span><kbd>Ctrl/⌘ Z</kbd> Undo · <kbd>Ctrl/⌘ O</kbd> Open · <kbd>Ctrl/⌘ S</kbd> Export</span></div>
-    </section>
-    <section class="about-card" aria-labelledby="aboutTitle">
-      <div><span class="eyebrow">ABOUT BOUNDARYLAB</span><h2 id="aboutTitle">Every image has a story in its edges.</h2><p>We built BoundaryLab for people who love looking closer. Uncover shapes, textures, and hidden structure, then turn those discoveries into crisp visuals. Experiment freely, fine-tune every line, and keep your images right on your device.</p></div>
-      <div class="about-values" aria-label="BoundaryLab values"><span>LOOK CLOSER</span><span>MAKE IT YOURS</span><span>STAY PRIVATE</span></div>
+      <div class="control-footer"><span id="processingStatus" role="status">Ready</span></div>
     </section>
     <footer><span>BoundaryLab Studio · Browser Edition</span><span>Images are processed locally on your device</span></footer>
   </main>
@@ -145,7 +141,13 @@
         <article><span>03</span><h3>Tune the edges</h3><p>Choose Sobel, Canny-like, or Laplacian detection. Adjust contrast, brightness, smoothing, thickness, rotation, and edge color.</p></article>
         <article><span>04</span><h3>Save your work</h3><p>Keep images in your private on-device gallery, then export a PNG, JPEG, WebP, or SVG edge map. Undo and Redo revisit recent changes.</p></article>
       </div>
-      <div class="guide-footer"><div><b>Private by design</b><p>Images are processed on this device and are not uploaded by the browser workspace.</p></div><div class="guide-shortcuts"><b>Shortcuts</b><p><kbd>Ctrl/⌘ O</kbd> Open · <kbd>Ctrl/⌘ S</kbd> Export · <kbd>Ctrl/⌘ Z</kbd> Undo</p></div></div>
+      <section class="guide-about" aria-labelledby="aboutTitle">
+        <p class="eyebrow">ABOUT BOUNDARYLAB</p>
+        <h3 id="aboutTitle">Every image has a story in its edges.</h3>
+        <p>We built BoundaryLab for people who love looking closer. Uncover shapes, textures, and hidden structure, then turn those discoveries into crisp visuals. Experiment freely, fine-tune every line, and keep your images right on your device.</p>
+        <div class="guide-about-values" aria-label="BoundaryLab values"><span>LOOK CLOSER</span><span>MAKE IT YOURS</span><span>STAY PRIVATE</span></div>
+      </section>
+      <div class="guide-footer"><div><b>Private by design</b><p>Images are processed on this device and are not uploaded by the browser workspace.</p></div></div>
       <button id="guideDone" class="button primary guide-done" type="button">Back to workspace</button>
     </section>
   </div>

@@ -219,16 +219,9 @@ input[type="range"] { display: block; width: 100%; height: 4px; margin-top: 9px;
 .toggle-row b, .toggle-row small { display: block; }
 .toggle-row small { color: var(--subtle); font-size: 9px; }
 .toggle-row input { accent-color: var(--accent); }
-.control-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--border); color: var(--subtle); font-size: 9px; }
+.control-footer { display: flex; justify-content: flex-start; gap: 12px; margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--border); color: var(--subtle); font-size: 9px; }
 kbd { padding: 2px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel-soft); color: var(--muted); font-size: 9px; }
 footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px 2px 22px; color: var(--subtle); font-size: 9px; }
-
-.about-card { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-top: 14px; padding: 19px 21px; border: 1px solid var(--border); border-radius: 13px; background: linear-gradient(112deg, color-mix(in srgb, var(--accent) 11%, var(--panel)), var(--panel)); }
-.about-card > div:first-child { max-width: 780px; }
-.about-card h2 { margin: 4px 0 6px; font-size: 19px; letter-spacing: -.025em; }
-.about-card p { margin: 0; color: var(--muted); font-size: 11px; }
-.about-values { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
-.about-values span { color: var(--accent); font-size: 8px; font-weight: 800; letter-spacing: .11em; }
 
 .gallery-card h2 { margin: 4px 0 5px; font-size: 26px; letter-spacing: -.035em; }
 .gallery-intro { margin: 0; color: var(--muted); font-size: 11px; }
@@ -263,10 +256,13 @@ footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px
 .guide-grid article { padding: 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--panel-strong); }
 .guide-grid article > span { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
 .guide-grid h3 { margin: 4px 0; font-size: 12px; }
-.guide-grid p, .guide-footer p { margin: 0; color: var(--muted); font-size: 10px; }
-.guide-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; padding: 13px; border-radius: 11px; background: var(--panel-soft); }
+.guide-grid p, .guide-footer p, .guide-about > p:last-of-type { margin: 0; color: var(--muted); font-size: 10px; }
+.guide-about { margin-top: 13px; padding: 14px; border: 1px solid var(--border); border-radius: 11px; background: linear-gradient(112deg, color-mix(in srgb, var(--accent) 11%, var(--panel)), var(--panel)); }
+.guide-about h3 { margin: 4px 0 6px; font-size: 17px; letter-spacing: -.025em; }
+.guide-about-values { display: flex; gap: 11px; flex-wrap: wrap; margin-top: 10px; }
+.guide-about-values span { color: var(--accent); font-size: 8px; font-weight: 800; letter-spacing: .11em; }
+.guide-footer { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 11px; padding: 13px; border-radius: 11px; background: var(--panel-soft); }
 .guide-footer b { display: block; margin-bottom: 4px; font-size: 10px; }
-.guide-shortcuts p { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .guide-done { margin-top: 16px; }
 
 @media (max-width: 920px) {
@@ -304,9 +300,7 @@ footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px
   .modal-card { padding: 22px 16px; }
   .guide-card h2 { padding-right: 28px; font-size: 23px; }
   .guide-grid, .guide-footer { grid-template-columns: 1fr; }
-  .about-card { align-items: flex-start; flex-direction: column; gap: 12px; padding: 15px; }
-  .about-card h2 { font-size: 17px; }
-  .about-values { flex-direction: row; flex-wrap: wrap; gap: 11px; }
+  .guide-about h3 { font-size: 16px; }
 }
 @media (max-width: 390px) {
   .privacy-chip { font-size: 8px; }

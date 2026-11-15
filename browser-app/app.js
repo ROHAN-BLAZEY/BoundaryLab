@@ -635,19 +635,6 @@
     setTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
   });
   document.addEventListener('keydown', (event) => {
-    const modifier = event.ctrlKey || event.metaKey;
-    if (modifier && event.key.toLowerCase() === 'o') {
-      event.preventDefault();
-      $('#file').click();
-    }
-    if (modifier && event.key.toLowerCase() === 's') {
-      event.preventDefault();
-      exportAs('png');
-    }
-    if (modifier && event.key.toLowerCase() === 'z') {
-      event.preventDefault();
-      (event.shiftKey ? $('#redo') : $('#undo')).click();
-    }
     if (event.key === 'Escape') {
       if (!$('#galleryModal').hidden) closeModal($('#galleryModal'));
       if (!$('#guideModal').hidden) closeModal($('#guideModal'));
