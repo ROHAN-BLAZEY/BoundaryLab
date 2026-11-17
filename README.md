@@ -1,2 +1,0 @@
-# boundaryLabs
-Edge Segmentation Software
