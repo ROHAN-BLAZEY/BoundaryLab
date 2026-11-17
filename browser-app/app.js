@@ -36,6 +36,7 @@
     style: 'outline', edgeMethod: 'canny', low: 28, high: 78,
     cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 0,
     rotation: 0, color: '#087967', invert: false, transparent: false,
+    autoNormalize: false, morphology: 'off',
   };
   const settings = { ...defaults };
 
@@ -65,6 +66,8 @@
       color: settings.color,
       invert: settings.invert,
       transparent: settings.transparent,
+      autoNormalize: settings.autoNormalize,
+      morphology: settings.morphology,
     };
     for (const [id, value] of Object.entries(controls)) {
       const element = $('#' + id);
@@ -77,6 +80,14 @@
     $('#thicknessVal').textContent = settings.edgeThickness;
     $('#brightnessVal').textContent = settings.brightness;
     $('#contrastVal').textContent = settings.contrast;
+    $('#simpleDetail').value = Math.round(Math.max(0, Math.min(100, (80 - settings.low) / .55)));
+    $('#simpleSmoothness').value = settings.cleanup * 25;
+    $('#simpleThickness').value = settings.edgeThickness;
+    $('#simpleContrast').value = settings.contrast;
+    $('#detailVal').textContent = $('#simpleDetail').value;
+    $('#smoothnessVal').textContent = $('#simpleSmoothness').value;
+    $('#simpleThicknessVal').textContent = settings.edgeThickness;
+    $('#simpleContrastVal').textContent = settings.contrast;
     $('#rval').textContent = settings.rotation + '°';
   }
 
@@ -498,13 +509,12 @@
 
   const PRESET_KEY = 'boundarylab-local-presets-v1';
   const builtInPresets = {
-    'Fine outline': { style: 'outline', edgeMethod: 'canny', low: 28, high: 78, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 8, rotation: 0, color: '#087967', invert: false, transparent: true },
-    'Bold outline': { style: 'outline', edgeMethod: 'canny', low: 22, high: 68, cleanup: 1, edgeThickness: 3, brightness: 0, contrast: 18, rotation: 0, color: '#087967', invert: false, transparent: false },
-    'Tattoo stencil': { style: 'edge-map', edgeMethod: 'canny', low: 30, high: 86, cleanup: 2, edgeThickness: 2, brightness: 5, contrast: 32, rotation: 0, color: '#ffffff', invert: false, transparent: false },
-    'Mechanical component': { style: 'blueprint', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#5685ff', invert: false, transparent: false },
-    'Architectural outline': { style: 'overlay', edgeMethod: 'canny', low: 25, high: 75, cleanup: 1, edgeThickness: 2, brightness: 0, contrast: 12, rotation: 0, color: '#087967', invert: false, transparent: false },
-    'Artistic sketch': { style: 'coloring', edgeMethod: 'sobel', low: 34, high: 88, cleanup: 2, edgeThickness: 1, brightness: 8, contrast: 14, rotation: 0, color: '#087967', invert: false, transparent: false },
-    'High contrast': { style: 'threshold', edgeMethod: 'canny', low: 115, high: 165, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 38, rotation: 0, color: '#087967', invert: false, transparent: false },
+    'Clean Outline': { style: 'outline', edgeMethod: 'canny', low: 31, high: 86, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 8, rotation: 0, color: '#087967', invert: false, transparent: true, autoNormalize: true, morphology: 'off' },
+    'Detailed Outline': { style: 'outline', edgeMethod: 'canny', low: 18, high: 58, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 14, rotation: 0, color: '#087967', invert: false, transparent: true, autoNormalize: true, morphology: 'off' },
+    'Bold Outline': { style: 'outline', edgeMethod: 'canny', low: 23, high: 70, cleanup: 1, edgeThickness: 3, brightness: 0, contrast: 18, rotation: 0, color: '#087967', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
+    'Sketch Style': { style: 'coloring', edgeMethod: 'sobel', low: 34, high: 88, cleanup: 2, edgeThickness: 1, brightness: 8, contrast: 14, rotation: 0, color: '#087967', invert: false, transparent: false, autoNormalize: true, morphology: 'open' },
+    'Technical Drawing': { style: 'blueprint', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#5685ff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
+    'Stencil Style': { style: 'edge-map', edgeMethod: 'canny', low: 30, high: 86, cleanup: 2, edgeThickness: 2, brightness: 5, contrast: 32, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close-open' },
   };
 
   function readLocalPresets() {
@@ -612,7 +622,7 @@
       const settingById = {
         style: 'style', edgeMethod: 'edgeMethod', threshold: 'low', highThreshold: 'high',
         cleanup: 'cleanup', edgeThickness: 'edgeThickness', brightness: 'brightness', contrast: 'contrast',
-        rotation: 'rotation', color: 'color', invert: 'invert', transparent: 'transparent',
+        rotation: 'rotation', color: 'color', invert: 'invert', transparent: 'transparent', autoNormalize: 'autoNormalize', morphology: 'morphology',
       };
       settings[settingById[element.id]] = element.type === 'checkbox'
         ? element.checked
@@ -636,6 +646,12 @@
     importProjectSettings(event.target.files[0]);
     event.target.value = '';
   });
+  $$('.quick-presets [data-quick-preset]').forEach((button) => button.addEventListener('click', () => applyPreset(`Built in:${button.dataset.quickPreset}`)));
+  $('#simpleDetail').addEventListener('input', (event) => { settings.low = Math.round(80 - Number(event.target.value) * .55); settings.high = Math.min(255, settings.low + 50); saveHistory(); schedule(); });
+  $('#simpleSmoothness').addEventListener('input', (event) => { settings.cleanup = Math.round(Number(event.target.value) / 25); saveHistory(); schedule(); });
+  $('#simpleThickness').addEventListener('input', (event) => { settings.edgeThickness = Number(event.target.value); saveHistory(); schedule(); });
+  $('#simpleContrast').addEventListener('input', (event) => { settings.contrast = Number(event.target.value); saveHistory(); schedule(); });
+  $('#autoEnhance').addEventListener('click', () => { if (!basePixels) return toast('Open an image first'); Object.assign(settings, { autoNormalize: true, cleanup: 1, low: 26, high: 76, contrast: 12, morphology: 'close' }); sync(); saveHistory(); render(); toast('Auto enhancement applied'); });
   $('#undo').addEventListener('click', () => {
     if (historyIndex <= 0) return;
     historyIndex--;

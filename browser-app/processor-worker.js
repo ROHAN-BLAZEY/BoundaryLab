@@ -21,6 +21,22 @@ function adjustGrayscale(gray, settings) {
   return adjusted;
 }
 
+function normalizeContrast(gray) {
+  const histogram = new Uint32Array(256);
+  for (const value of gray) histogram[value]++;
+  const lowTarget = Math.max(1, Math.floor(gray.length * 0.01));
+  const highTarget = Math.max(lowTarget + 1, Math.floor(gray.length * 0.99));
+  let sum = 0; let low = 0; let high = 255;
+  for (let i = 0; i < 256; i++) { sum += histogram[i]; if (sum >= lowTarget) { low = i; break; } }
+  sum = 0;
+  for (let i = 255; i >= 0; i--) { sum += histogram[i]; if (sum >= gray.length - highTarget) { high = i; break; } }
+  if (high <= low + 4) return gray;
+  const output = new Uint8Array(gray.length);
+  const scale = 255 / (high - low);
+  for (let i = 0; i < gray.length; i++) output[i] = Math.max(0, Math.min(255, Math.round((gray[i] - low) * scale)));
+  return output;
+}
+
 function smooth(gray, width, height, passes) {
   let current = gray;
   for (let pass = 0; pass < passes; pass++) {
@@ -170,6 +186,42 @@ function thickenEdges(edge, width, height, thickness) {
   return current;
 }
 
+function dilate(edge, width, height) {
+  const next = new Uint8Array(edge.length);
+  for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+    const i = y * width + x;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (edge[i + dy * width + dx]) { next[i] = 255; dy = 2; break; }
+  }
+  return next;
+}
+
+function erode(edge, width, height) {
+  const next = new Uint8Array(edge.length);
+  for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+    const i = y * width + x; let all = true;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!edge[i + dy * width + dx]) all = false;
+    if (all) next[i] = 255;
+  }
+  return next;
+}
+
+function refineEdges(edge, width, height, mode, cleanup) {
+  let next = edge;
+  if (mode === 'close' || mode === 'close-open') next = erode(dilate(next, width, height), width, height);
+  if (mode === 'open' || mode === 'close-open') next = dilate(erode(next, width, height), width, height);
+  if (cleanup < 2) return next;
+  const output = next.slice(); const seen = new Uint8Array(next.length); const queue = new Int32Array(next.length); const minSize = cleanup === 2 ? 3 : cleanup === 3 ? 6 : 10;
+  for (let start = width + 1; start < next.length - width - 1; start++) {
+    if (!next[start] || seen[start]) continue;
+    let head = 0, tail = 0; queue[tail++] = start; seen[start] = 1;
+    while (head < tail) { const i = queue[head++], x = i % width, y = (i - x) / width; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const n = (y + dy) * width + x + dx; if (dx || dy) if (next[n] && !seen[n]) { seen[n] = 1; queue[tail++] = n; } } }
+    if (tail < minSize) for (let i = 0; i < tail; i++) output[queue[i]] = 0;
+  }
+  for (let x = 0; x < width; x++) { output[x] = 0; output[(height - 1) * width + x] = 0; }
+  for (let y = 0; y < height; y++) { output[y * width] = 0; output[y * width + width - 1] = 0; }
+  return output;
+}
+
 function colorFromHex(hex) {
   const digits = String(hex || '#087967').slice(1);
   return [0, 2, 4].map((offset) => Number.parseInt(digits.slice(offset, offset + 2), 16) || 0);
@@ -248,10 +300,11 @@ self.onmessage = ({ data: job }) => {
   const { id, pixels: pixelBuffer, width, height, settings } = job;
   const pixels = new Uint8ClampedArray(pixelBuffer);
   const gray = makeGrayscale(pixels, width * height);
-  const adjusted = adjustGrayscale(gray, settings);
+  const adjusted = settings.autoNormalize ? normalizeContrast(adjustGrayscale(gray, settings)) : adjustGrayscale(gray, settings);
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
   const detected = detectEdges(smoothed, width, height, settings);
-  const edge = thickenEdges(detected, width, height, settings.edgeThickness);
+  const refined = refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
+  const edge = thickenEdges(refined, width, height, settings.edgeThickness);
   const output = makeOutput(pixels, adjusted, edge, width, height, settings);
   self.postMessage({ id, width, height, gray, edge, output }, [gray.buffer, edge.buffer, output.buffer]);
 };

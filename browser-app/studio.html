@@ -95,6 +95,19 @@
 
     <section class="controls-panel" aria-labelledby="controlsTitle">
       <div class="section-title controls-title"><div><span class="eyebrow">TUNE YOUR RESULT</span><h2 id="controlsTitle">Processing controls</h2></div><button id="defaults" class="text-button" type="button">Restore defaults</button></div>
+      <section class="quick-studio" aria-label="Quick Studio controls">
+        <div><p class="eyebrow">QUICK STUDIO</p><h3>Start with a proven processing style</h3><p>Use a preset, then make simple visual adjustments. Every option changes the real processing settings.</p></div>
+        <div class="quick-presets" role="group" aria-label="Quick presets">
+          <button type="button" data-quick-preset="Clean Outline">Clean outline</button><button type="button" data-quick-preset="Detailed Outline">Detailed outline</button><button type="button" data-quick-preset="Bold Outline">Bold outline</button><button type="button" data-quick-preset="Sketch Style">Sketch style</button><button type="button" data-quick-preset="Technical Drawing">Technical drawing</button><button type="button" data-quick-preset="Stencil Style">Stencil style</button><button id="autoEnhance" class="auto-enhance" type="button">Auto enhance image</button>
+        </div>
+        <div class="simple-control-grid">
+          <label class="range-label">Detail <output id="detailVal">50</output><input id="simpleDetail" type="range" min="0" max="100" value="50"></label>
+          <label class="range-label">Smoothness <output id="smoothnessVal">25</output><input id="simpleSmoothness" type="range" min="0" max="100" value="25"></label>
+          <label class="range-label">Line thickness <output id="simpleThicknessVal">1</output><input id="simpleThickness" type="range" min="1" max="5" value="1"></label>
+          <label class="range-label">Contrast <output id="simpleContrastVal">0</output><input id="simpleContrast" type="range" min="-100" max="100" value="0"></label>
+        </div>
+      </section>
+      <details class="advanced-controls"><summary>Advanced image processing <span>Thresholds, methods, cleanup, colour and export-ready controls</span></summary>
       <div class="control-grid">
         <label class="control-label">Output style<select id="style"><option value="outline">Color outline</option><option value="edge-map">Dark edge map</option><option value="overlay">Photo + edges</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label>
         <label class="control-label">Edge method<select id="edgeMethod"><option value="sobel">Sobel gradient</option><option value="canny">Canny-like</option><option value="laplacian">Laplacian</option></select></label>
@@ -108,7 +121,10 @@
         <label class="control-label">Edge color<select id="color"><option value="#087967">Boundary teal</option><option value="#ff5bc8">Magenta</option><option value="#a5d94b">Lime</option><option value="#f0a63d">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label>
         <label class="toggle-row"><span><b>Invert image</b><small>Swap light and dark</small></span><input id="invert" type="checkbox"></label>
         <label class="toggle-row"><span><b>Transparent background</b><small>Keep empty edge areas clear</small></span><input id="transparent" type="checkbox"></label>
+        <label class="toggle-row"><span><b>Contrast normalization</b><small>Stretch the image intensity range before edge detection</small></span><input id="autoNormalize" type="checkbox"></label>
+        <label class="control-label">Edge continuity<select id="morphology"><option value="off">Natural edges</option><option value="close">Connect small gaps</option><option value="open">Remove tiny specks</option><option value="close-open">Connect and clean</option></select></label>
       </div>
+      </details>
       <div class="control-footer"><span id="processingStatus" role="status">Ready</span></div>
     </section>
     <footer><span>BoundaryLab Studio · Browser Edition</span><span>Images are processed locally on your device</span></footer>

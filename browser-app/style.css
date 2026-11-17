@@ -211,6 +211,18 @@ main { width: min(1320px, 100%); margin: 0 auto; padding: 0 20px; }
 .placeholder small { max-width: 190px; font-size: 9px; }
 
 .controls-panel { margin-top: 13px; padding: 14px; }
+.topbar, #guideModal { display: none !important; }
+.quick-studio { display: grid; grid-template-columns: minmax(180px, .85fr) minmax(250px, 1.45fr); gap: 14px 20px; margin: 0 0 14px; padding: 14px; border: 1px solid var(--border); border-radius: 11px; background: var(--panel-soft); }
+.quick-studio h3 { margin: 3px 0 6px; font-size: 15px; }
+.quick-studio p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.quick-presets { display: flex; flex-wrap: wrap; align-content: start; gap: 7px; }
+.quick-presets button { min-height: 31px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; background: var(--panel); color: var(--text); font: inherit; font-size: 10px; cursor: pointer; }
+.quick-presets button:hover, .quick-presets .auto-enhance { border-color: var(--accent); color: var(--accent); }
+.quick-presets .auto-enhance { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); font-weight: 800; }
+.simple-control-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 16px; }
+.advanced-controls { border-top: 1px solid var(--border); }
+.advanced-controls summary { padding: 12px 0 4px; color: var(--text); font-size: 11px; font-weight: 800; cursor: pointer; }
+.advanced-controls summary span { margin-left: 8px; color: var(--subtle); font-size: 9px; font-weight: 400; }
 .controls-title { margin-bottom: 10px; }
 .control-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 16px; }
 .control-label, .range-label { display: block; margin: 8px 0; color: var(--muted); font-size: 10px; }
