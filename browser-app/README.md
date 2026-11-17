@@ -8,7 +8,7 @@ Serve this folder from a local web server, then open the served page in a modern
 
 ## Deploy to Vercel
 
-The repository root includes `vercel.json`, which selects the static `browser-app` folder as the deployment output and skips the build step. Keep Vercel's **Root Directory** at the repository root for this configuration. Alternatively, set **Root Directory** to `browser-app`, choose **Other** as the framework, leave the build command empty, and set the output directory to `.`. The package has no build step or third-party dependencies.
+Import the repository into Vercel and set **Root Directory** to `browser-app`. Choose **Other** as the framework, leave the build command empty, and use `.` as the output directory. The package has no build step or third-party dependencies.
 
 ## Features
 
@@ -24,3 +24,17 @@ The repository root includes `vercel.json`, which selects the static `browser-ap
 - The About BoundaryLab story and values are included in the workspace guide.
 
 Images are processed locally in the browser and are not uploaded by this package. Saved gallery entries stay in the browser's local IndexedDB storage and can be removed from the Gallery. This is a lightweight JavaScript implementation, not a pixel-identical port of the Python/OpenCV processor. There is no sign-in, cloud storage, or AI chat service.
+
+## Public website routes
+
+This package now includes a public website around the Studio. When deployed with Vercel, `vercel.json` maps clean URLs to the static pages:
+
+- `/` — homepage
+- `/studio` — live image-processing workspace
+- `/technology` — Technology & Research
+- `/showcase` — showcase examples
+- `/about`, `/contact`, and `/pricing`
+- `/for-designers`, `/for-photographers`, `/for-stencil-artists`
+- `/for-mechanical-engineering` and `/for-architects-engineers`
+
+Before production deployment, replace the placeholder domain in `sitemap.xml` with the final website URL. There is intentionally no Google OAuth, account system, cloud project manager, cloud storage, payment system, or analytics integration in this browser-only package.

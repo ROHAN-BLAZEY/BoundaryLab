@@ -1,0 +1,18 @@
+(() => {
+  const page = document.body.dataset.page || 'home';
+  const links = [
+    ['Home','/'],['Live Studio','/studio'],['Technology','/technology'],['Showcase','/showcase'],['About','/about'],['Contact','/contact']
+  ];
+  const audiences = [['For designers','/for-designers'],['For photographers','/for-photographers'],['For stencil artists','/for-stencil-artists'],['For mechanical engineering','/for-mechanical-engineering'],['For architects & engineers','/for-architects-engineers'],['Pricing','/pricing']];
+  const header = document.querySelector('[data-site-header]');
+  const footer = document.querySelector('[data-site-footer]');
+  const active = name => page === name.toLowerCase().replace(' ','-') ? ' aria-current="page"' : '';
+  if (header) header.innerHTML = `<header class="site-header"><div class="nav-wrap"><a class="site-brand" href="/"><span class="brand-token">B</span><span>BoundaryLab</span></a><nav class="nav-links" aria-label="Primary navigation">${links.map(([name,url])=>`<a href="${url}"${active(name)}>${name}</a>`).join('')}</nav><div class="nav-tools"><button class="theme-toggle" id="theme" type="button" aria-label="Toggle theme">◐</button><button class="nav-toggle" id="menu" type="button" aria-expanded="false">Menu</button></div></div><nav class="nav-drawer" id="drawer" hidden aria-label="More navigation">${audiences.map(([name,url])=>`<a href="${url}">${name}</a>`).join('')}</nav></header>`;
+  if (footer) footer.innerHTML = `<footer class="footer"><div class="footer-inner"><span>BoundaryLab Studio · Explore. Process. Create.</span><span>Browser processing · Images stay on your device</span></div></footer>`;
+  const theme = localStorage.getItem('boundarylab-theme') || 'dark';
+  document.body.dataset.theme = theme;
+  document.querySelector('#theme')?.addEventListener('click',()=>{const next=document.body.dataset.theme==='light'?'dark':'light';document.body.dataset.theme=next;localStorage.setItem('boundarylab-theme',next)});
+  document.querySelector('#menu')?.addEventListener('click',()=>{const d=document.querySelector('#drawer'),open=d.hidden;d.hidden=!open;document.querySelector('#menu').setAttribute('aria-expanded',String(open));});
+  const draw = (canvas, mode='edge') => { if(!canvas)return; const c=canvas.getContext('2d'),w=canvas.width=360,h=canvas.height=220; const g=c.createLinearGradient(0,0,w,h);g.addColorStop(0,'#d6e4df');g.addColorStop(1,'#587a73');c.fillStyle=g;c.fillRect(0,0,w,h);c.fillStyle='#eabf64';c.beginPath();c.arc(120,95,54,0,Math.PI*2);c.fill();c.fillStyle='#29463f';c.fillRect(210,46,96,130);c.fillStyle='#14312e';c.beginPath();c.moveTo(58,190);c.lineTo(170,120);c.lineTo(222,190);c.closePath();c.fill();if(mode==='gray'||mode==='edge'){const im=c.getImageData(0,0,w,h);for(let i=0;i<im.data.length;i+=4){const x=.299*im.data[i]+.587*im.data[i+1]+.114*im.data[i+2];im.data[i]=im.data[i+1]=im.data[i+2]=x;}c.putImageData(im,0,0)}if(mode==='edge'){const im=c.getImageData(0,0,w,h),out=c.createImageData(w,h);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4,v=Math.abs(im.data[i]-im.data[i+4])+Math.abs(im.data[i]-im.data[i+w*4]);const e=v>26?255:0;out.data[i]=30;out.data[i+1]=e;out.data[i+2]=e?175:40;out.data[i+3]=255;}c.putImageData(out,0,0)}};
+  document.querySelectorAll('[data-demo]').forEach(el=>draw(el,el.dataset.demo));
+})();

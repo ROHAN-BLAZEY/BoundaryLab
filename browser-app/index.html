@@ -6,9 +6,11 @@
   <meta name="theme-color" content="#101719">
   <meta name="description" content="A private browser workspace for image boundary processing.">
   <title>BoundaryLab Studio — Browser Edition</title>
+  <link rel="stylesheet" href="public.css">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-page="studio">
+  <div data-site-header></div>
   <header class="topbar">
     <button id="brandDashboard" class="brand" type="button" aria-haspopup="dialog" aria-controls="guideModal" title="Open the BoundaryLab guide">
       <span class="brand-mark" aria-hidden="true">B</span>
@@ -45,6 +47,10 @@
         <button id="reset" class="button secondary compact" type="button" disabled>Clear image</button>
       <button id="saveToGallery" class="button secondary compact" type="button" disabled>Save to gallery</button>
       <button id="galleryButton" class="button secondary compact" type="button">Gallery <span id="galleryCount">0</span></button>
+      <select id="presetSelect" class="project-select" aria-label="Choose a local preset"><option value="">Presets</option></select>
+      <button id="savePreset" class="button secondary compact" type="button">Save preset</button>
+      <button id="exportProject" class="button secondary compact" type="button">Export settings</button>
+      <label class="button secondary compact import-project">Import settings<input id="importProject" type="file" accept="application/json,.json"></label>
         <details class="export-menu">
           <summary class="button primary compact">Export <span aria-hidden="true">▾</span></summary>
           <div class="menu">
@@ -151,6 +157,7 @@
       <button id="guideDone" class="button primary guide-done" type="button">Back to workspace</button>
     </section>
   </div>
+  <script src="public.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

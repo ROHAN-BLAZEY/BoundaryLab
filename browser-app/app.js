@@ -496,6 +496,101 @@
     render();
   }
 
+  const PRESET_KEY = 'boundarylab-local-presets-v1';
+  const builtInPresets = {
+    'Fine outline': { style: 'outline', edgeMethod: 'canny', low: 28, high: 78, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 8, rotation: 0, color: '#087967', invert: false, transparent: true },
+    'Bold outline': { style: 'outline', edgeMethod: 'canny', low: 22, high: 68, cleanup: 1, edgeThickness: 3, brightness: 0, contrast: 18, rotation: 0, color: '#087967', invert: false, transparent: false },
+    'Tattoo stencil': { style: 'edge-map', edgeMethod: 'canny', low: 30, high: 86, cleanup: 2, edgeThickness: 2, brightness: 5, contrast: 32, rotation: 0, color: '#ffffff', invert: false, transparent: false },
+    'Mechanical component': { style: 'blueprint', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#5685ff', invert: false, transparent: false },
+    'Architectural outline': { style: 'overlay', edgeMethod: 'canny', low: 25, high: 75, cleanup: 1, edgeThickness: 2, brightness: 0, contrast: 12, rotation: 0, color: '#087967', invert: false, transparent: false },
+    'Artistic sketch': { style: 'coloring', edgeMethod: 'sobel', low: 34, high: 88, cleanup: 2, edgeThickness: 1, brightness: 8, contrast: 14, rotation: 0, color: '#087967', invert: false, transparent: false },
+    'High contrast': { style: 'threshold', edgeMethod: 'canny', low: 115, high: 165, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 38, rotation: 0, color: '#087967', invert: false, transparent: false },
+  };
+
+  function readLocalPresets() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PRESET_KEY) || '{}');
+      return saved && typeof saved === 'object' ? saved : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeLocalPresets(presets) {
+    try {
+      localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
+      return true;
+    } catch {
+      toast('Browser storage is unavailable for presets');
+      return false;
+    }
+  }
+
+  function refreshPresetMenu() {
+    const select = $('#presetSelect');
+    if (!select) return;
+    const local = readLocalPresets();
+    select.replaceChildren(new Option('Presets', ''));
+    const addGroup = (label, records) => {
+      const group = document.createElement('optgroup');
+      group.label = label;
+      Object.keys(records).sort().forEach((name) => group.append(new Option(name, `${label}:${name}`)));
+      select.append(group);
+    };
+    addGroup('Built in', builtInPresets);
+    if (Object.keys(local).length) addGroup('Saved on this device', local);
+  }
+
+  function applyPreset(reference) {
+    if (!reference) return;
+    const [group, ...parts] = reference.split(':');
+    const name = parts.join(':');
+    const source = group === 'Built in' ? builtInPresets : readLocalPresets();
+    const preset = source[name];
+    if (!preset) return toast('That preset is no longer available');
+    Object.assign(settings, { ...defaults, ...preset });
+    sync();
+    saveHistory();
+    render();
+    toast(`Applied ${name}`);
+  }
+
+  function savePreset() {
+    const name = window.prompt('Name this local preset');
+    if (!name || !name.trim()) return;
+    const presets = readLocalPresets();
+    presets[name.trim().slice(0, 48)] = { ...settings };
+    if (writeLocalPresets(presets)) {
+      refreshPresetMenu();
+      toast('Preset saved on this device');
+    }
+  }
+
+  function exportProjectSettings() {
+    const project = { format: 'boundarylab-browser-settings', version: 1, createdAt: new Date().toISOString(), settings: { ...settings } };
+    download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), `${filename || 'boundarylab'}-settings.json`);
+  }
+
+  function importProjectSettings(file) {
+    if (!file) return;
+    if (file.size > 128 * 1024) return toast('Settings file is too large');
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const project = JSON.parse(String(reader.result));
+        if (!project || project.format !== 'boundarylab-browser-settings' || !project.settings) throw new Error('invalid');
+        Object.assign(settings, { ...defaults, ...project.settings });
+        sync();
+        saveHistory();
+        render();
+        toast('Settings imported');
+      } catch {
+        toast('Choose a valid BoundaryLab settings file');
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function setTheme(theme) {
     const isLight = theme === 'light';
     document.body.dataset.theme = isLight ? 'light' : 'dark';
@@ -531,6 +626,16 @@
   $('#reset').addEventListener('click', clearImage);
   $('#saveToGallery').addEventListener('click', saveCurrentToGallery);
   $('#galleryButton').addEventListener('click', openGallery);
+  $('#presetSelect')?.addEventListener('change', (event) => {
+    applyPreset(event.target.value);
+    event.target.value = '';
+  });
+  $('#savePreset')?.addEventListener('click', savePreset);
+  $('#exportProject')?.addEventListener('click', exportProjectSettings);
+  $('#importProject')?.addEventListener('change', (event) => {
+    importProjectSettings(event.target.files[0]);
+    event.target.value = '';
+  });
   $('#undo').addEventListener('click', () => {
     if (historyIndex <= 0) return;
     historyIndex--;
@@ -654,5 +759,6 @@
   }
   sync();
   updateHistoryButtons();
+  refreshPresetMenu();
   refreshGalleryCount();
 })();

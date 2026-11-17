@@ -169,6 +169,9 @@ main { width: min(1320px, 100%); margin: 0 auto; padding: 0 20px; }
 .source-name { min-width: 0; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .source-name #dimensions { margin-left: 8px; color: var(--subtle); }
 .tool-actions { flex-wrap: wrap; }
+.project-select { max-width: 132px; min-height: 30px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; background: var(--panel); color: var(--text); font: inherit; font-size: 10px; }
+.import-project { position: relative; overflow: hidden; }
+.import-project input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .export-menu { position: relative; }
 .export-menu summary { list-style: none; }
 .export-menu summary::-webkit-details-marker { display: none; }

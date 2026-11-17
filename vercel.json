@@ -2,5 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "",
-  "outputDirectory": "browser-app"
+  "outputDirectory": "browser-app",
+  "rewrites": [
+    { "source": "/", "destination": "/home.html" },
+    { "source": "/studio", "destination": "/index.html" },
+    { "source": "/technology", "destination": "/technology.html" },
+    { "source": "/showcase", "destination": "/showcase.html" },
+    { "source": "/about", "destination": "/about.html" },
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/pricing", "destination": "/pricing.html" },
+    { "source": "/for-designers", "destination": "/for-designers.html" },
+    { "source": "/for-photographers", "destination": "/for-photographers.html" },
+    { "source": "/for-stencil-artists", "destination": "/for-stencil-artists.html" },
+    { "source": "/for-mechanical-engineering", "destination": "/for-mechanical-engineering.html" },
+    { "source": "/for-architects-engineers", "destination": "/for-architects-engineers.html" }
+  ]
 }
