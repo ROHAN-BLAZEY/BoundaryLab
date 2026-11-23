@@ -19,6 +19,22 @@
 - Added Image Studio query-string preset initialization. This does not remove or rename any built-in preset.
 - Workspace pages explicitly disclose capabilities which do not yet exist, rather than presenting a placeholder as a completed algorithm.
 
+## Implemented specialised processing in this branch
+- Clean Outline: edge-aware bilateral-style denoising, Canny-style extraction and morphological closing.
+- Detailed Outline: multi-scale fine/coarse edge extraction and continuity refinement.
+- Bold Outline: Canny-style extraction, local speck suppression, gap closing and thicker strokes.
+- Sketch: tonal dodge-based pencil rendering, charcoal blending and cross-hatching variants.
+- Technical Drawing: multi-scale line extraction, morphological continuity and isolated response suppression.
+- Blueprint: technical line extraction with optional grid overlay and adjustable spacing.
+- Stencil: Otsu threshold selection, foreground polarity heuristic, connected-component speck removal and boundary extraction. It does not automatically add physical bridges.
+- Live Studio: continuous camera frames are sampled locally, processed in a worker at a throttled rate, and can be captured as PNG.
+
+## Automated test coverage
+- Added Node built-in test coverage for Otsu segmentation, stencil mask classes, sketch variants, edge-aware smoothing, multi-scale extraction, each specialised workspace mode, and all three original edge methods.
+- Added GitHub Actions workflow for script syntax checks, algorithm tests and route configuration checks.
+- At the time of this update, GitHub reports the workflow runs as failed with zero jobs returned. Therefore the tests are committed but their CI execution is not verified; investigate repository Actions permissions/workflow scheduling before treating the suite as passing.
+- Browser-level checks (camera permission, real image comparisons, gallery, undo/redo, exports, responsive layout and direct route refresh) still require a Vercel preview browser session.
+
 ## Further specialist-engine work (follow-up phases)
 1. Blueprint: calibrated scale workflow, units, annotations, sheet layout, multiple views, PDF/SVG drafting export. Never infer physical dimensions without calibration.
 2. Live: continuous camera stream, throttled worker processing, real-time overlays, capture, and robust track cleanup.
