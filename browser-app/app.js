@@ -777,4 +777,20 @@
   updateHistoryButtons();
   refreshPresetMenu();
   refreshGalleryCount();
+
+  // Specialised workspace links reuse the existing, proven Image Studio engine.
+  // Built-in presets remain available in the original Image Studio menu.
+  const workspacePresets = {
+    'clean-outline': 'Clean Outline',
+    'detailed-outline': 'Detailed Outline',
+    'bold-outline': 'Bold Outline',
+    sketch: 'Sketch Style',
+    'technical-drawing': 'Technical Drawing',
+    stencil: 'Stencil Style',
+  };
+  const requestedWorkspace = new URLSearchParams(window.location.search).get('workspace');
+  if (requestedWorkspace && workspacePresets[requestedWorkspace]) {
+    applyPreset(`Built in:${workspacePresets[requestedWorkspace]}`);
+    document.body.dataset.workspace = requestedWorkspace;
+  }
 })();
