@@ -685,7 +685,6 @@
   $('#guideClose').addEventListener('click', () => closeModal($('#guideModal')));
   $('#guideDone').addEventListener('click', () => closeModal($('#guideModal')));
   $$('.modal-backdrop').forEach((backdrop) => backdrop.addEventListener('click', () => closeModal(backdrop.parentElement)));
-  $('#brandDashboard').addEventListener('click', openGuide);
   $$('.zoom').forEach((button) => button.addEventListener('click', () => {
     const canvases = { source, gray: grayCanvas, result };
     const titles = { source: 'Color image', gray: 'Grayscale', result: 'Processed image' };
@@ -785,24 +784,4 @@
   refreshPresetMenu();
   refreshGalleryCount();
 
-  // Specialised workspace links reuse the existing, proven Image Studio engine.
-  // Built-in presets remain available in the original Image Studio menu.
-  const workspacePresets = {
-    'clean-outline': 'Clean Outline',
-    'detailed-outline': 'Detailed Outline',
-    'bold-outline': 'Bold Outline',
-    blueprint: 'Technical Drawing',
-    sketch: 'Sketch Style',
-    'technical-drawing': 'Technical Drawing',
-    stencil: 'Stencil Style',
-  };
-  const requestedWorkspace = new URLSearchParams(window.location.search).get('workspace');
-  if (requestedWorkspace && workspacePresets[requestedWorkspace]) {
-    applyPreset('Built in:' + workspacePresets[requestedWorkspace]);
-    settings.workspaceMode = requestedWorkspace;
-    document.body.dataset.workspace = requestedWorkspace;
-    if (requestedWorkspace === 'blueprint') settings.style = 'blueprint';
-    sync();
-    render();
-  }
 })();

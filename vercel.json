@@ -5,6 +5,10 @@
   "outputDirectory": "browser-app",
   "rewrites": [
     {
+      "source": "/gallery-technology",
+      "destination": "/gallery-technology.html"
+    },
+    {
       "source": "/live",
       "destination": "/live.html"
     },
