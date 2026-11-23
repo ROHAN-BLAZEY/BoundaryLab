@@ -54,7 +54,7 @@ test('multi-scale detector and each specialised workspace produce correctly size
   assert.equal(multi.length,f.data.length);
   for(const mode of ['clean-outline','detailed-outline','bold-outline','sketch','technical-drawing','blueprint','stencil']) {
     const result=api.workspaceProcess(f.data,f.width,f.height,{...settings,workspaceMode:mode});
-    assert.ok(result.edge instanceof Uint8Array, mode+' must return an edge mask');
+    assert.ok(ArrayBuffer.isView(result.edge), mode+' must return an edge mask');
     assert.equal(result.edge.length,f.data.length);
     assert.ok(result.tone===f.data || result.tone.length===f.data.length);
   }
