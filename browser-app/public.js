@@ -1,14 +1,17 @@
 (() => {
   const page = document.body.dataset.page || 'home';
   const links = [
-    ['Home','/'],['Image Studio','/studio'],['Live Studio','/live'],['Blueprint','/blueprint'],['Technology','/technology'],['Showcase','/showcase'],['About','/about'],['Contact','/contact']
+    ['Home','/'],['Image Studio','/studio'],['Technology','/technology'],['Showcase','/showcase'],['About','/about'],['Contact','/contact']
   ];
+  const presetLinks = [['Blueprint Studio','/blueprint'],['Clean Outline','/clean-outline'],['Detailed Outline','/detailed-outline'],['Bold Outline','/bold-outline'],['Sketch Studio','/sketch'],['Technical Drawing','/technical-drawing'],['Stencil Studio','/stencil']];
   const audiences = [['For designers','/for-designers'],['For photographers','/for-photographers'],['For stencil artists','/for-stencil-artists'],['For mechanical engineering','/for-mechanical-engineering'],['For architects & engineers','/for-architects-engineers'],['Pricing','/pricing']];
   const header = document.querySelector('[data-site-header]');
   const footer = document.querySelector('[data-site-footer]');
   const active = name => page === name.toLowerCase().replace(' ','-') ? ' aria-current="page"' : '';
-  if (header) header.innerHTML = `<header class="site-header"><div class="nav-wrap"><a class="site-brand" href="/"><span class="brand-token">B</span><span>BoundaryLab</span></a><nav class="nav-links" aria-label="Primary navigation">${links.map(([name,url])=>`<a href="${url}"${active(name)}>${name}</a>`).join('')}</nav><div class="nav-tools"><button class="theme-toggle" id="theme" type="button" aria-label="Toggle theme">◐</button><button class="nav-toggle" id="menu" type="button" aria-expanded="false">Menu</button></div></div><nav class="nav-drawer" id="drawer" hidden aria-label="More navigation">${audiences.map(([name,url])=>`<a href="${url}">${name}</a>`).join('')}</nav></header>`;
+  if (header) header.innerHTML = `<header class="site-header"><div class="nav-wrap"><a class="site-brand" href="/"><span class="brand-token">B</span><span>BoundaryLab</span></a><nav class="nav-links" aria-label="Primary navigation">${links.map(([name,url])=>`<a href="${url}"${active(name)}>${name}</a>`).join('')}<label class="preset-nav-label"><span>Presets</span><select id="presetNavigation" aria-label="Open a specialised preset workspace"><option value="">Choose preset…</option>${presetLinks.map(([name,url])=>`<option value="${url}">${name}</option>`).join('')}</select></label></nav><div class="nav-tools"><button class="theme-toggle" id="theme" type="button" aria-label="Toggle theme">◐</button><button class="nav-toggle" id="menu" type="button" aria-expanded="false">Menu</button></div></div><nav class="nav-drawer" id="drawer" hidden aria-label="More navigation">${audiences.map(([name,url])=>`<a href="${url}">${name}</a>`).join('')}</nav></header>`;
   if (footer) footer.innerHTML = `<footer class="footer"><div class="footer-inner"><span>BoundaryLab Studio · Explore. Process. Create.</span><span>Browser processing · Images stay on your device</span></div></footer>`;
+  document.querySelector('#presetNavigation')?.addEventListener('change', event => { if (event.target.value) window.location.href = event.target.value; });
+  if (location.pathname === '/live' || location.pathname === '/live.html') { window.location.replace('/studio#live-camera'); return; }
   const theme = localStorage.getItem('boundarylab-theme') || 'dark';
   document.body.dataset.theme = theme;
   document.querySelector('#theme')?.addEventListener('click',()=>{const next=document.body.dataset.theme==='light'?'dark':'light';document.body.dataset.theme=next;localStorage.setItem('boundarylab-theme',next)});
