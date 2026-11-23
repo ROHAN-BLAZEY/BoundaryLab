@@ -68,6 +68,10 @@
       transparent: settings.transparent,
       autoNormalize: settings.autoNormalize,
       morphology: settings.morphology,
+      sketchVariant: settings.sketchVariant,
+      stencilOffset: settings.stencilOffset,
+      blueprintGrid: settings.blueprintGrid,
+      gridSpacing: settings.gridSpacing,
     };
     for (const [id, value] of Object.entries(controls)) {
       const element = $('#' + id);
@@ -89,6 +93,8 @@
     $('#simpleThicknessVal').textContent = settings.edgeThickness;
     $('#simpleContrastVal').textContent = settings.contrast;
     $('#rval').textContent = settings.rotation + '°';
+    $('#stencilOffsetVal').textContent = settings.stencilOffset;
+    $('#gridSpacingVal').textContent = settings.gridSpacing;
   }
 
   function updateHistoryButtons() {
@@ -622,6 +628,7 @@
       const settingById = {
         style: 'style', edgeMethod: 'edgeMethod', threshold: 'low', highThreshold: 'high',
         cleanup: 'cleanup', edgeThickness: 'edgeThickness', brightness: 'brightness', contrast: 'contrast',
+        sketchVariant: 'sketchVariant', stencilOffset: 'stencilOffset', blueprintGrid: 'blueprintGrid', gridSpacing: 'gridSpacing',
         rotation: 'rotation', color: 'color', invert: 'invert', transparent: 'transparent', autoNormalize: 'autoNormalize', morphology: 'morphology',
       };
       settings[settingById[element.id]] = element.type === 'checkbox'
