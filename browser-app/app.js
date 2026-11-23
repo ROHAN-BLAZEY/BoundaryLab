@@ -784,6 +784,7 @@
     'clean-outline': 'Clean Outline',
     'detailed-outline': 'Detailed Outline',
     'bold-outline': 'Bold Outline',
+    blueprint: 'Technical Drawing',
     sketch: 'Sketch Style',
     'technical-drawing': 'Technical Drawing',
     stencil: 'Stencil Style',
@@ -796,9 +797,5 @@
     if (requestedWorkspace === 'blueprint') settings.style = 'blueprint';
     sync();
     render();
-  }
-  if (requestedWorkspace && workspacePresets[requestedWorkspace]) {
-    applyPreset(`Built in:${workspacePresets[requestedWorkspace]}`);
-    document.body.dataset.workspace = requestedWorkspace;
   }
 })();
