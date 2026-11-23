@@ -1,7 +1,7 @@
 (() => {
   const page = document.body.dataset.page || 'home';
   const links = [
-    ['Home','/'],['Live Studio','/studio'],['Technology','/technology'],['Showcase','/showcase'],['About','/about'],['Contact','/contact']
+    ['Home','/'],['Image Studio','/studio'],['Live Studio','/live'],['Blueprint','/blueprint'],['Technology','/technology'],['Showcase','/showcase'],['About','/about'],['Contact','/contact']
   ];
   const audiences = [['For designers','/for-designers'],['For photographers','/for-photographers'],['For stencil artists','/for-stencil-artists'],['For mechanical engineering','/for-mechanical-engineering'],['For architects & engineers','/for-architects-engineers'],['Pricing','/pricing']];
   const header = document.querySelector('[data-site-header]');
