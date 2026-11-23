@@ -1,25 +1,5 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="A focused BoundaryLab image processing workspace.">
-<meta name="theme-color" content="#101719">
-<title>BoundaryLab Workspace</title><link rel="stylesheet" href="public.css"><link rel="stylesheet" href="workspace.css">
-</head>
-<body data-page="workspace">
-<div data-site-header></div>
-<main class="workspace-shell">
-<a class="back-link" href="/">← All workspaces</a>
-<section class="workspace-hero">
-<p class="eyebrow" id="workspaceKicker">BOUNDARYLAB WORKSPACE</p>
-<h1 id="workspaceTitle">Focused image workspace</h1>
-<p class="workspace-lead" id="workspaceDescription">A dedicated entry point for a focused image workflow.</p>
-<div class="workspace-actions"><a class="button primary" id="launchWorkspace" href="/studio">Open workspace in Image Studio →</a><a class="button" href="/studio">Open full Image Studio</a></div>
-<p class="workspace-note" id="workspaceNote">Your image remains on this device. This workspace uses the existing browser processing engine.</p>
-</section>
-<section class="workspace-info"><article class="card"><p class="eyebrow">WORKFLOW</p><h2 id="workflowTitle">Start with an image</h2><ol id="workflowSteps"><li>Open an image in the studio.</li><li>Adjust the processing controls.</li><li>Inspect and export your result.</li></ol></article><article class="card"><p class="eyebrow">CAPABILITIES</p><h2>Built on the existing Image Studio</h2><p id="capabilityText">The original processing tools remain available, including edge methods, output styles, undo and redo, local gallery, and exports.</p><p class="workspace-warning" id="limitationText"></p></article></section>
-<section class="workspace-footer-cta"><h2>Need the full set of controls?</h2><p>Open Image Studio at any time. All six original built-in presets remain available there.</p><a href="/studio" class="button primary">Go to Image Studio →</a></section>
-</main>
-<div data-site-footer></div>
-<script src="public.js"></script><script src="workspace.js"></script>
-</body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101719"><title>BoundaryLab Live Studio</title><link rel="stylesheet" href="public.css"><link rel="stylesheet" href="workspace.css"><link rel="stylesheet" href="live-studio.css"></head>
+<body data-page="workspace"><div data-site-header></div><main class="workspace-shell live-shell"><a class="back-link" href="/">← All workspaces</a><section class="workspace-hero"><p class="eyebrow">REAL-TIME CAMERA PROCESSING</p><h1>Live Studio</h1><p class="workspace-lead">See image boundaries processed from your camera stream. Frames are processed locally in your browser.</p><div class="workspace-actions"><button class="button primary" id="startCamera">Start camera</button><button class="button" id="stopCamera" disabled>Stop camera</button><button class="button" id="captureFrame" disabled>Capture frame</button></div><p class="workspace-note" id="liveStatus" role="status">Camera is stopped. HTTPS and camera permission are required.</p></section>
+<section class="live-stage"><div class="live-view"><video id="liveVideo" playsinline muted></video><canvas id="liveOutput" aria-label="Live processed camera output"></canvas><span class="live-tag">LIVE PROCESSED</span></div><div class="live-settings"><label>Processing mode<select id="liveMode"><option value="detailed-outline">Detailed outline</option><option value="clean-outline">Clean outline</option><option value="bold-outline">Bold outline</option><option value="sketch">Pencil sketch</option><option value="technical-drawing">Technical drawing</option></select></label><label>Processing intensity<input id="liveIntensity" type="range" min="10" max="100" value="48"></label><p>Live processing is throttled to keep the interface responsive. High-resolution cameras may lower the effective frame rate.</p></div></section>
+<section class="workspace-footer-cta"><h2>Want to refine a captured image?</h2><p>Send a captured frame to Image Studio for full controls, gallery storage and export formats.</p><a href="/studio" class="button primary">Open Image Studio →</a></section></main><div data-site-footer></div><script src="public.js"></script><script src="live-studio.js"></script></body></html>
