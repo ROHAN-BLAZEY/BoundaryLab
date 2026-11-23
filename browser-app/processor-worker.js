@@ -1,3 +1,5 @@
+importScripts('./specialized-algorithms.js');
+
 function makeGrayscale(pixels, count) {
   const gray = new Uint8Array(count);
   for (let pixel = 0, offset = 0; pixel < count; pixel++, offset += 4) {
@@ -243,7 +245,14 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
 
     switch (settings.style) {
       case 'gray':
+      case 'sketch':
         red = green = blue = gray[pixel];
+        break;
+      case 'stencil':
+        red = green = blue = gray[pixel] ? 255 : 0;
+        break;
+      case 'technical':
+        red = green = blue = isEdge ? 22 : 248;
         break;
       case 'threshold': {
         const value = gray[pixel] >= Number(settings.low) ? 255 : 0;
@@ -302,9 +311,12 @@ self.onmessage = ({ data: job }) => {
   const gray = makeGrayscale(pixels, width * height);
   const adjusted = settings.autoNormalize ? normalizeContrast(adjustGrayscale(gray, settings)) : adjustGrayscale(gray, settings);
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
-  const detected = detectEdges(smoothed, width, height, settings);
-  const refined = refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
-  const edge = thickenEdges(refined, width, height, settings.edgeThickness);
-  const output = makeOutput(pixels, adjusted, edge, width, height, settings);
+  const specialized = workspaceProcess(smoothed, width, height, settings);
+  const detected = specialized.edge || detectEdges(smoothed, width, height, settings);
+  const refined = settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
+  const edge = settings.workspaceMode === 'bold-outline' ? refined : thickenEdges(refined, width, height, settings.edgeThickness);
+  const modeStyle = settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'stencil' ? 'stencil' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : settings.style;
+  const output = makeOutput(pixels, specialized.tone || adjusted, edge, width, height, { ...settings, style: modeStyle });
+  if (settings.workspaceMode === 'blueprint') blueprintGrid(output, width, height, settings);
   self.postMessage({ id, width, height, gray, edge, output }, [gray.buffer, edge.buffer, output.buffer]);
 };
