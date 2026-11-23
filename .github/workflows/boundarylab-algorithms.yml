@@ -1,0 +1,26 @@
+name: BoundaryLab algorithm tests
+on:
+  push:
+    branches:
+      - feature/boundarylab-multi-workspace-expansion
+  pull_request:
+    branches:
+      - main
+jobs:
+  algorithms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax-check browser scripts
+        run: |
+          node --check browser-app/app.js
+          node --check browser-app/processor-worker.js
+          node --check browser-app/specialized-algorithms.js
+          node --check browser-app/workspace.js
+      - name: Run algorithm regression tests
+        run: node --test browser-app/tests/*.test.cjs
+      - name: Validate Vercel route configuration
+        run: node -e "const fs=require('fs'); const c=JSON.parse(fs.readFileSync('browser-app/vercel.json','utf8')); if(!Array.isArray(c.rewrites)) process.exit(1); for(const p of ['live','blueprint','clean-outline','detailed-outline','bold-outline','sketch','technical-drawing','stencil','studio']) if(!c.rewrites.some(r=>r.source==='/' + p)) throw new Error('Missing route: '+p);"
