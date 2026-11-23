@@ -36,7 +36,7 @@
     style: 'outline', edgeMethod: 'canny', low: 28, high: 78,
     cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 0,
     rotation: 0, color: '#087967', invert: false, transparent: false,
-    autoNormalize: false, morphology: 'off',
+    autoNormalize: false, morphology: 'off', workspaceMode: 'standard', sketchVariant: 'pencil', stencilOffset: 0, blueprintGrid: true, gridSpacing: 32,
   };
   const settings = { ...defaults };
 
@@ -789,6 +789,14 @@
     stencil: 'Stencil Style',
   };
   const requestedWorkspace = new URLSearchParams(window.location.search).get('workspace');
+  if (requestedWorkspace && workspacePresets[requestedWorkspace]) {
+    applyPreset('Built in:' + workspacePresets[requestedWorkspace]);
+    settings.workspaceMode = requestedWorkspace;
+    document.body.dataset.workspace = requestedWorkspace;
+    if (requestedWorkspace === 'blueprint') settings.style = 'blueprint';
+    sync();
+    render();
+  }
   if (requestedWorkspace && workspacePresets[requestedWorkspace]) {
     applyPreset(`Built in:${workspacePresets[requestedWorkspace]}`);
     document.body.dataset.workspace = requestedWorkspace;
