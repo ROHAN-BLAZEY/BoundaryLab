@@ -571,6 +571,21 @@
     toast(`Applied ${name}`);
   }
 
+  // Dedicated preset pages deep-link into this same Image Studio. Apply the
+  // requested built-in preset before an image is loaded so it is ready on upload.
+  const workspacePresetNames = {
+    blueprint: 'Technical Drawing',
+    'clean-outline': 'Clean Outline',
+    'detailed-outline': 'Detailed Outline',
+    'bold-outline': 'Bold Outline',
+    sketch: 'Sketch Style',
+    'technical-drawing': 'Technical Drawing',
+    stencil: 'Stencil Style',
+  };
+  const requestedWorkspace = new URLSearchParams(window.location.search).get('workspace');
+  const requestedPreset = workspacePresetNames[requestedWorkspace];
+  if (requestedPreset) applyPreset(`Built in:${requestedPreset}`);
+
   function savePreset() {
     const name = window.prompt('Name this local preset');
     if (!name || !name.trim()) return;
