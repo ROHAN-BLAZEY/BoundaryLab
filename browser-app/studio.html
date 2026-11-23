@@ -123,6 +123,10 @@
         <label class="toggle-row"><span><b>Transparent background</b><small>Keep empty edge areas clear</small></span><input id="transparent" type="checkbox"></label>
         <label class="toggle-row"><span><b>Contrast normalization</b><small>Stretch the image intensity range before edge detection</small></span><input id="autoNormalize" type="checkbox"></label>
         <label class="control-label">Edge continuity<select id="morphology"><option value="off">Natural edges</option><option value="close">Connect small gaps</option><option value="open">Remove tiny specks</option><option value="close-open">Connect and clean</option></select></label>
+        <label class="control-label">Sketch rendering<select id="sketchVariant"><option value="pencil">Pencil / graphite</option><option value="charcoal">Charcoal tone</option><option value="crosshatch">Cross-hatching</option></select></label>
+        <label class="range-label">Stencil threshold offset <output id="stencilOffsetVal">0</output><input id="stencilOffset" type="range" min="-80" max="80" value="0"></label>
+        <label class="toggle-row"><span><b>Blueprint grid</b><small>Overlay a technical reference grid</small></span><input id="blueprintGrid" type="checkbox" checked></label>
+        <label class="range-label">Blueprint grid spacing <output id="gridSpacingVal">32</output><input id="gridSpacing" type="range" min="12" max="80" value="32"></label>
       </div>
       </details>
       <div class="control-footer"><span id="processingStatus" role="status">Ready</span></div>
