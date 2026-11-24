@@ -13,31 +13,31 @@ const constrained=memory<=3||cores<=4;
 const deviceLabel=mobile?'Mobile device':(constrained?'Laptop · efficiency mode':'Desktop / laptop');
 let stream=null,raf=0,stopped=true,busy=false,job=0,lastProcess=0,lastMetrics=0,processedFrames=0,processedFps=0,latency=0,slowStreak=0,fastStreak=0,adaptiveScale=1,latest=null,activeWidth=0,activeHeight=0;
 const say=message=>{status.textContent=message;};
-const settingsIds=['liveMode','livePerformance','liveDetail','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveSmooth','liveThickness','liveEdgeSoftness','liveColor','liveContrast','liveBrightness','liveStencilOffset','liveNormalize','liveInvert','liveGrid'];
+const settingsIds=['liveMode','livePerformance','liveDetail','liveEdgeMethod','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveLinking','liveSmooth','liveGapClosing','liveMinContour','liveThickness','liveEdgeSoftness','liveContrast','liveBrightness','liveNormalize'];
 const presets={
- 'clean-outline':{low:28,high:78,smooth:1,thickness:1,contrast:12},
- 'detailed-outline':{low:18,high:58,smooth:0,thickness:1,contrast:18},
- 'bold-outline':{low:32,high:86,smooth:1,thickness:2,contrast:20},
- 'stencil':{low:28,high:78,smooth:1,thickness:1,contrast:18},
- 'blueprint':{low:24,high:68,smooth:1,thickness:1,contrast:14},
- 'technical-drawing':{low:24,high:70,smooth:1,thickness:1,contrast:16}
+ 'clean-outline':{low:24,high:68,smooth:1,thickness:1,contrast:8,edgeMethod:'canny',edgeLinking:72,gapClosing:1,minContourLength:4},
+ 'detailed-outline':{low:14,high:48,smooth:0,thickness:1,contrast:15,edgeMethod:'scharr',edgeLinking:82,gapClosing:0,minContourLength:2},
+ 'bold-outline':{low:36,high:95,smooth:1,thickness:2,contrast:18,edgeMethod:'canny',edgeLinking:68,gapClosing:1,minContourLength:8},
+ 'stencil':{low:30,high:76,smooth:2,thickness:1,contrast:20,edgeMethod:'canny',edgeLinking:76,gapClosing:2,minContourLength:8},
+ 'blueprint':{low:22,high:62,smooth:1,thickness:1,contrast:10,edgeMethod:'scharr',edgeLinking:80,gapClosing:1,minContourLength:3},
+ 'technical-drawing':{low:18,high:58,smooth:1,thickness:1,contrast:14,edgeMethod:'scharr',edgeLinking:84,gapClosing:1,minContourLength:3}
 };
 function updateLabels(){
- for(const [id,out,suffix] of [['liveDetail','detailValue',''],['liveFpsLimit','fpsValue',''],['liveLow','lowValue',''],['liveHigh','highValue',''],['liveSmooth','smoothValue',''],['liveThickness','thicknessValue',''],['liveEdgeSoftness','softnessValue',''],['liveContrast','contrastValue',''],['liveBrightness','brightnessValue',''],['liveStencilOffset','stencilValue','']])$('#'+out).textContent=$('#'+id).value+suffix;
+ for(const [id,out] of [['liveDetail','detailValue'],['liveFpsLimit','fpsValue'],['liveLow','lowValue'],['liveHigh','highValue'],['liveLinking','linkValue'],['liveSmooth','smoothValue'],['liveGapClosing','gapValue'],['liveMinContour','contourValue'],['liveThickness','thicknessValue'],['liveEdgeSoftness','softnessValue'],['liveContrast','contrastValue'],['liveBrightness','brightnessValue']])$('#'+out).textContent=$('#'+id).value;
  $('#livePresetName').textContent=$('#liveMode').selectedOptions[0].textContent;
 }
 function setCanvasSize(canvas,w,h){if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
 function dimensions(maxSide,sourceWidth,sourceHeight){const scale=Math.min(1,maxSide/Math.max(sourceWidth,sourceHeight));return {width:Math.max(1,Math.round(sourceWidth*scale)),height:Math.max(1,Math.round(sourceHeight*scale))};}
 function selectedProfile(){
  const p=$('#livePerformance').value;
- if(p==='smooth')return {fps:mobile?12:16,res:320};
- if(p==='detail')return {fps:mobile?15:20,res:480};
- return {fps:mobile?14:18,res:400};
+ if(p==='smooth')return {fps:mobile?10:12,res:mobile?240:320};
+ if(p==='detail')return {fps:mobile?14:20,res:mobile?480:640};
+ return {fps:mobile?12:16,res:mobile?320:400};
 }
 function setProfile(){const p=selectedProfile();$('#liveFpsLimit').value=p.fps;$('#liveResolutionSelect').value=String(p.res);updateLabels();}
 function currentSettings(){
  const low=Number($('#liveLow').value),high=Math.max(low+1,Number($('#liveHigh').value));
- return {workspaceMode:$('#liveMode').value,style:'edge-map',livePreview:true,edgeMethod:'canny',low,high,cleanup:Number($('#liveSmooth').value),edgeThickness:Number($('#liveThickness').value),edgeSoftness:Number($('#liveEdgeSoftness').value),color:$('#liveColor').value,contrast:Number($('#liveContrast').value),brightness:Number($('#liveBrightness').value),stencilOffset:Number($('#liveStencilOffset').value),autoNormalize:$('#liveNormalize').checked,invert:$('#liveInvert').checked,transparent:false,blueprintGrid:$('#liveGrid').checked,gridSpacing:32,morphology:'close',sketchVariant:'pencil'};
+ return {workspaceMode:$('#liveMode').value,style:'edge-map',livePreview:true,edgeMethod:$('#liveEdgeMethod').value,low,high,cleanup:Number($('#liveSmooth').value),edgeThickness:Number($('#liveThickness').value),edgeSoftness:Number($('#liveEdgeSoftness').value),contrast:Number($('#liveContrast').value),brightness:Number($('#liveBrightness').value),autoNormalize:$('#liveNormalize').checked,edgeLinking:Number($('#liveLinking').value),gapClosing:Number($('#liveGapClosing').value),minContourLength:Number($('#liveMinContour').value),invert:false,transparent:false,blueprintGrid:false,morphology:'close'};
 }
 function updateMetrics(now){
  if(now-lastMetrics<800)return;processedFps=processedFrames*1000/Math.max(1,now-lastMetrics);processedFrames=0;lastMetrics=now;
@@ -133,8 +133,8 @@ function applyPreset(){
 }
 function resetSettings(){
  $('#liveMode').value='clean-outline';$('#livePerformance').value='balanced';$('#liveDetail').value=50;setProfile();
- $('#liveColor').value='#e8eeee';$('#liveBrightness').value=0;$('#liveEdgeSoftness').value=1;$('#liveThickness').value=1;$('#liveStencilOffset').value=0;
- $('#liveNormalize').checked=true;$('#liveInvert').checked=false;$('#liveGrid').checked=false;
+ $('#liveEdgeMethod').value='canny';$('#liveLinking').value=72;$('#liveGapClosing').value=1;$('#liveMinContour').value=4;
+ $('#liveBrightness').value=0;$('#liveEdgeSoftness').value=0;$('#liveThickness').value=1;$('#liveNormalize').checked=true;
  applyPreset();updateLabels();say(stream?'Settings reset · live processing continues.':'Settings reset.');
 }
 settingsIds.forEach(id=>$('#'+id).addEventListener('input',()=>{
