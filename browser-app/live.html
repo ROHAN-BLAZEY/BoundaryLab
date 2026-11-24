@@ -38,6 +38,7 @@
 <label>Low threshold <output id="lowValue">28</output><input id="liveLow" type="range" min="1" max="160" value="28"></label>
 <label>High threshold <output id="highValue">78</output><input id="liveHigh" type="range" min="10" max="240" value="78"></label>
 <label>Edge linking <output id="linkValue">65</output><input id="liveLinking" type="range" min="0" max="100" value="65"></label>
+<label>Temporal stability <output id="temporalValue">35</output><input id="liveTemporal" type="range" min="0" max="80" value="35"></label>
 <label>Noise reduction <output id="smoothValue">1</output><input id="liveSmooth" type="range" min="0" max="3" value="1"></label>
 <label>Gap closing <output id="gapValue">1</output><input id="liveGapClosing" type="range" min="0" max="2" value="1"></label>
 <label>Minimum contour length <output id="contourValue">6</output><input id="liveMinContour" type="range" min="1" max="40" value="6"></label>
@@ -47,6 +48,7 @@
 <label>Brightness <output id="brightnessValue">0</output><input id="liveBrightness" type="range" min="-50" max="50" value="0"></label>
 <label class="live-toggle"><input id="liveNormalize" type="checkbox" checked> Auto contrast</label>
 </div></details>
+<div class="live-tuning-note"><strong>AR note</strong><span>Live Studio currently provides camera-aligned edge effects in the browser. True person/object masks, world tracking and real-world depth occlusion require a native ARKit/ARCore runtime and a compatible segmentation/depth model or device API.</span></div>
 <div class="live-tuning-note"><strong>Tip</strong><span>Start with Clean Outline. Increase sensitivity to reveal fine details; raise edge strength to remove weaker lines. Use Smooth mode if your phone gets warm or the preview begins to lag.</span></div>
 </div>
 </section>
