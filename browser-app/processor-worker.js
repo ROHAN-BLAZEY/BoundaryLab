@@ -296,12 +296,13 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
         break;
     }
 
-    if (settings.style === 'edge-map' && !isEdge && settings.softMask) {
+    if (!isEdge && settings.softMask && (settings.style === 'edge-map' || settings.style === 'blueprint' || settings.style === 'technical')) {
       const halo = settings.softMask[pixel];
       if (halo) {
-        red = Math.round(8 + (rgb[0] - 8) * halo / 255);
-        green = Math.round(13 + (rgb[1] - 13) * halo / 255);
-        blue = Math.round(14 + (rgb[2] - 14) * halo / 255);
+        const base = settings.style === 'blueprint' ? [7, 26, 52] : settings.style === 'technical' ? [250, 250, 250] : [8, 13, 14];
+        red = Math.round(base[0] + (rgb[0] - base[0]) * halo / 255);
+        green = Math.round(base[1] + (rgb[1] - base[1]) * halo / 255);
+        blue = Math.round(base[2] + (rgb[2] - base[2]) * halo / 255);
       }
     }
 
