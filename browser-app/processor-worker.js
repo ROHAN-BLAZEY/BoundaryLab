@@ -296,6 +296,25 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
         break;
     }
 
+    if (settings.style === 'edge-map' && !isEdge && Number(settings.edgeSoftness) > 0) {
+      const radius = Math.min(2, Math.max(0, Number(settings.edgeSoftness) || 0));
+      let halo = 0;
+      const x = pixel % width, y = Math.floor(pixel / width);
+      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || xx >= width || yy < 0 || yy >= height) continue;
+        if (edge[yy * width + xx]) {
+          const distance = Math.abs(dx) + Math.abs(dy);
+          halo = Math.max(halo, distance === 1 ? 0.22 : distance === 2 ? 0.10 : 0.06);
+        }
+      }
+      if (halo) {
+        red = Math.round(8 + rgb[0] * halo);
+        green = Math.round(13 + rgb[1] * halo);
+        blue = Math.round(14 + rgb[2] * halo);
+      }
+    }
+
     if (settings.invert) {
       red = 255 - red;
       green = 255 - green;
