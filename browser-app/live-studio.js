@@ -128,7 +128,8 @@ function captureFrame(){
 }
 function applyPreset(){
  const preset=presets[$('#liveMode').value];if(!preset)return;
- for(const [key,value] of Object.entries(preset))$('#live'+key[0].toUpperCase()+key.slice(1)).value=value;
+ const controls={low:'liveLow',high:'liveHigh',smooth:'liveSmooth',thickness:'liveThickness',contrast:'liveContrast',edgeMethod:'liveEdgeMethod',edgeLinking:'liveLinking',gapClosing:'liveGapClosing',minContourLength:'liveMinContour'};
+ for(const [key,value] of Object.entries(preset)){const id=controls[key];if(id&&$('#'+id))$('#'+id).value=value;}
  updateLabels();
 }
 function resetSettings(){
