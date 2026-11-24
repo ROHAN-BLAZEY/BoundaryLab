@@ -183,7 +183,7 @@ function detectEdges(gray, width, height, settings) {
 
   const { magnitude, direction } = settings.edgeMethod === 'scharr' ? scharrMagnitude(gray, width, height) : sobelMagnitude(gray, width, height);
   const thin = thinEdges(magnitude, direction, width, height);
-  if (settings.edgeMethod === 'canny') return hysteresis(thin, width, height, low, high);
+  if (settings.edgeMethod === 'canny' || settings.edgeMethod === 'scharr' || settings.edgeMethod === 'sobel') return hysteresis(thin, width, height, low, high);
   for (let i = 0; i < thin.length; i++) if (thin[i] > 0 && thin[i] >= low) edge[i] = 255;
   return edge;
 }
@@ -254,7 +254,7 @@ function colorFromHex(hex) {
 }
 
 function makeOutput(pixels, gray, edge, width, height, settings) {
-  const rgb = colorFromHex(settings.color);
+  const rgb = settings.style === 'edge-map' ? [255, 255, 255] : colorFromHex(settings.color);
   const output = new Uint8ClampedArray(width * height * 4);
   const transparentBackgroundStyles = new Set(['outline', 'edge-map', 'blueprint', 'neon', 'coloring']);
   const contrast = Math.max(-100, Math.min(100, Number(settings.contrast) || 0));
