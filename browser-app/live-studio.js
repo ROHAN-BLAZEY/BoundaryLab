@@ -6,7 +6,8 @@ const canvases={color:$('#liveColor'),gray:$('#liveGray'),output:$('#liveOutput'
 const ctx={color:canvases.color.getContext('2d'),gray:canvases.gray.getContext('2d'),output:canvases.output.getContext('2d')};
 const worker=new Worker('./processor-worker.js');
 const workCanvas=document.createElement('canvas'),workCtx=workCanvas.getContext('2d',{willReadFrequently:true});
-const mobile=matchMedia('(max-width:700px)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const resultCanvas=document.createElement('canvas'),resultCtx=resultCanvas.getContext('2d');
+const mobile=matchMedia('(max-width:700px)').matches||matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const memory=navigator.deviceMemory||4,cores=navigator.hardwareConcurrency||4;
 const constrained=memory<=3||cores<=4;
 const deviceLabel=mobile?'Mobile device':(constrained?'Laptop · efficiency mode':'Desktop / laptop');
@@ -26,12 +27,12 @@ function updateLabels(){
  $('#livePresetName').textContent=$('#liveMode').selectedOptions[0].textContent;
 }
 function setCanvasSize(canvas,w,h){if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
-function dimensions(maxWidth,sourceWidth,sourceHeight){const scale=Math.min(1,maxWidth/sourceWidth);return {width:Math.max(1,Math.round(sourceWidth*scale)),height:Math.max(1,Math.round(sourceHeight*scale))};}
+function dimensions(maxSide,sourceWidth,sourceHeight){const scale=Math.min(1,maxSide/Math.max(sourceWidth,sourceHeight));return {width:Math.max(1,Math.round(sourceWidth*scale)),height:Math.max(1,Math.round(sourceHeight*scale))};}
 function selectedProfile(){
  const p=$('#livePerformance').value;
- if(p==='smooth')return {fps:mobile?10:14,res:360};
- if(p==='detail')return {fps:mobile?12:18,res:mobile?480:800};
- return {fps:mobile?12:16,res:mobile?480:640};
+ if(p==='smooth')return {fps:mobile?12:16,res:320};
+ if(p==='detail')return {fps:mobile?15:20,res:480};
+ return {fps:mobile?14:18,res:400};
 }
 function setProfile(){const p=selectedProfile();$('#liveFpsLimit').value=p.fps;$('#liveResolutionSelect').value=String(p.res);updateLabels();}
 function currentSettings(){
@@ -48,8 +49,10 @@ function updateMetrics(now){
 function drawLiveColour(){
  if(video.readyState<2||!video.videoWidth)return;
  const d=dimensions(mobile?720:960,video.videoWidth,video.videoHeight);
- setCanvasSize(canvases.color,d.width,d.height);
+ setCanvasSize(canvases.color,d.width,d.height);setCanvasSize(canvases.gray,d.width,d.height);
  ctx.color.drawImage(video,0,0,d.width,d.height);
+ ctx.gray.filter='grayscale(1)';ctx.gray.drawImage(video,0,0,d.width,d.height);ctx.gray.filter='none';
+ return d;
 }
 function adaptPerformance(duration){
  const target=1000/Math.max(5,Number($('#liveFpsLimit').value));
@@ -66,7 +69,7 @@ function frameLoop(now){
  const target=1000/Math.max(5,Number($('#liveFpsLimit').value));
  if(now-lastProcess<target)return;
  lastProcess=now;
- const requested=Math.min(Number($('#liveResolutionSelect').value),mobile?640:960,constrained?640:960);
+ const requested=Math.min(Number($('#liveResolutionSelect').value),mobile?480:640,constrained?400:640);
  const d=dimensions(Math.max(240,Math.round(requested*adaptiveScale)),video.videoWidth,video.videoHeight);
  activeWidth=d.width;activeHeight=d.height;
  setCanvasSize(workCanvas,d.width,d.height);
@@ -82,11 +85,12 @@ worker.onmessage=({data})=>{
  busy=false;
  latency=Math.max(0,performance.now()-(data.sentAt||performance.now()));
  adaptPerformance(latency);
- setCanvasSize(canvases.gray,data.width,data.height);setCanvasSize(canvases.output,data.width,data.height);
- const grayRgba=new Uint8ClampedArray(data.gray.length*4);
- for(let i=0,j=0;i<data.gray.length;i++,j+=4){const v=data.gray[i];grayRgba[j]=grayRgba[j+1]=grayRgba[j+2]=v;grayRgba[j+3]=255;}
- ctx.gray.putImageData(new ImageData(grayRgba,data.width,data.height),0,0);
- ctx.output.putImageData(new ImageData(data.output,data.width,data.height),0,0);
+ setCanvasSize(resultCanvas,data.width,data.height);
+ resultCtx.putImageData(new ImageData(data.output,data.width,data.height),0,0);
+ const display=dimensions(mobile?720:960,video.videoWidth||data.width,video.videoHeight||data.height);
+ setCanvasSize(canvases.output,display.width,display.height);
+ ctx.output.imageSmoothingEnabled=true;ctx.output.imageSmoothingQuality='high';
+ ctx.output.clearRect(0,0,display.width,display.height);ctx.output.drawImage(resultCanvas,0,0,display.width,display.height);
  latest={width:data.width,height:data.height,pixels:data.output.slice()};capture.disabled=false;
  processedFrames++;updateMetrics(performance.now());
 };
@@ -102,14 +106,14 @@ async function startCamera(){
  if(!navigator.mediaDevices?.getUserMedia||!isSecureContext){say('Camera access requires HTTPS (or localhost) and a supported browser.');return;}
  start.disabled=true;say('Requesting camera permission…');
  try{
-  const preferred=mobile?640:960;
+  const preferred=mobile?720:1280;
   stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:$('#cameraFacing').value},width:{ideal:preferred},height:{ideal:mobile?480:540},frameRate:{ideal:30,max:30}}});
   video.srcObject=stream;await video.play();stopped=false;latest=null;adaptiveScale=1;slowStreak=0;fastStreak=0;busy=false;
   const track=stream.getVideoTracks()[0],trackSettings=track.getSettings();$('#liveCameraFps').textContent='Camera · '+Math.round(trackSettings.frameRate||30)+' FPS';
   activeWidth=trackSettings.width||video.videoWidth;activeHeight=trackSettings.height||video.videoHeight;
   track.addEventListener('ended',()=>{if(!stopped)stopCamera('Camera stream ended. Start the camera again to continue.');},{once:true});
   start.disabled=true;stop.disabled=false;capture.disabled=true;
-  processedFrames=0;lastMetrics=performance.now();lastProcess=0;lastMetrics=performance.now();
+  processedFrames=0;lastMetrics=performance.now();lastProcess=0;
   say('Camera connected · live colour preview is running.');
   raf=requestAnimationFrame(frameLoop);
  }catch(error){
