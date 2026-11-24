@@ -296,22 +296,12 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
         break;
     }
 
-    if (settings.style === 'edge-map' && !isEdge && Number(settings.edgeSoftness) > 0) {
-      const radius = Math.min(2, Math.max(0, Number(settings.edgeSoftness) || 0));
-      let halo = 0;
-      const x = pixel % width, y = Math.floor(pixel / width);
-      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if (xx < 0 || xx >= width || yy < 0 || yy >= height) continue;
-        if (edge[yy * width + xx]) {
-          const distance = Math.abs(dx) + Math.abs(dy);
-          halo = Math.max(halo, distance === 1 ? 0.22 : distance === 2 ? 0.10 : 0.06);
-        }
-      }
+    if (settings.style === 'edge-map' && !isEdge && settings.softMask) {
+      const halo = settings.softMask[pixel];
       if (halo) {
-        red = Math.round(8 + rgb[0] * halo);
-        green = Math.round(13 + rgb[1] * halo);
-        blue = Math.round(14 + rgb[2] * halo);
+        red = Math.round(8 + (rgb[0] - 8) * halo / 255);
+        green = Math.round(13 + (rgb[1] - 13) * halo / 255);
+        blue = Math.round(14 + (rgb[2] - 14) * halo / 255);
       }
     }
 
@@ -339,13 +329,42 @@ self.onmessage = ({ data: job }) => {
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
   const offset = settings.workspaceMode === 'stencil' ? 0 : Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
   const adjustedSettings = { ...settings, low: Math.max(0, Math.min(255, Number(settings.low) + offset)), high: Math.max(1, Math.min(255, Number(settings.high) + offset)) };
-  const specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
-  const detected = specialized.edge || detectEdges(smoothed, width, height, adjustedSettings);
-  const refined = settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
+  let specialized = { edge: null, tone: adjusted };
+  let detected;
+  let modeStyle;
+  let tone;
+  if (settings.livePreview) {
+    // Live preview deliberately uses the fast single-scale path. The full
+    // multi-scale workspace algorithms remain available to still-image work.
+    detected = detectEdges(smoothed, width, height, { ...adjustedSettings, edgeMethod: 'canny' });
+    if (settings.workspaceMode === 'stencil') {
+      specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
+      detected = specialized.edge || detected;
+    }
+    modeStyle = settings.workspaceMode === 'blueprint' ? 'blueprint'
+      : settings.workspaceMode === 'technical-drawing' ? 'technical'
+      : settings.workspaceMode === 'stencil' ? 'stencil' : 'edge-map';
+    tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : adjusted;
+  } else {
+    specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
+    detected = specialized.edge || detectEdges(smoothed, width, height, adjustedSettings);
+    modeStyle = settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'stencil' ? 'stencil' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : settings.style;
+    tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
+  }
+  const refined = settings.livePreview ? detected : (settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0))));
   const edge = settings.workspaceMode === 'bold-outline' ? refined : thickenEdges(refined, width, height, settings.edgeThickness);
-  const modeStyle = settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'stencil' ? 'stencil' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : settings.style;
-  const tone = settings.workspaceMode === 'stencil' ? thickenEdges(specialized.tone || adjusted, width, height, settings.edgeThickness) : (specialized.tone || adjusted);
-  const output = makeOutput(pixels, tone, edge, width, height, { ...settings, style: modeStyle });
+  let softMask = null;
+  if (settings.livePreview && Number(settings.edgeSoftness) > 0) {
+    const radius = Math.min(2, Math.max(1, Number(settings.edgeSoftness)));
+    softMask = new Uint8Array(edge.length);
+    let frontier = edge;
+    const weights = [0, 170, 72, 24];
+    for (let step = 1; step <= radius; step++) {
+      frontier = dilate(frontier, width, height);
+      for (let i = 0; i < edge.length; i++) if (frontier[i] && !edge[i]) softMask[i] = Math.max(softMask[i], weights[step]);
+    }
+  }
+  const output = makeOutput(pixels, tone, edge, width, height, { ...settings, style: modeStyle, softMask });
   if (settings.blueprintGrid) blueprintGrid(output, width, height, settings);
   self.postMessage({ id, width, height, gray, edge, output, sentAt: job.sentAt || 0 }, [gray.buffer, edge.buffer, output.buffer]);
 };
