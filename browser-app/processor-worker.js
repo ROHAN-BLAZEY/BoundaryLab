@@ -379,7 +379,7 @@ self.onmessage = ({ data: job }) => {
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
   const refined = settings.livePreview ? detected : (settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0))));
-  const edge = thickenEdges(refined, width, height, settings.edgeThickness);
+  const edge = settings.livePreview ? thickenEdges(refined, width, height, settings.edgeThickness) : settings.workspaceMode === 'bold-outline' ? refined : thickenEdges(refined, width, height, settings.edgeThickness);
   let softMask = null;
   if (settings.livePreview && Number(settings.edgeSoftness) > 0) {
     const radius = Math.min(2, Math.max(1, Number(settings.edgeSoftness)));
