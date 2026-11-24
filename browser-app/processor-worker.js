@@ -248,11 +248,17 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
       case 'sketch':
         red = green = blue = gray[pixel];
         break;
-      case 'stencil':
-        red = green = blue = gray[pixel] ? 255 : 0;
+      case 'stencil': {
+        const foreground = gray[pixel] !== 0;
+        red = foreground ? rgb[0] : 255;
+        green = foreground ? rgb[1] : 255;
+        blue = foreground ? rgb[2] : 255;
         break;
+      }
       case 'technical':
-        red = green = blue = isEdge ? 22 : 248;
+        red = isEdge ? rgb[0] : 250;
+        green = isEdge ? rgb[1] : 250;
+        blue = isEdge ? rgb[2] : 250;
         break;
       case 'threshold': {
         const value = gray[pixel] >= Number(settings.low) ? 255 : 0;
@@ -299,7 +305,8 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
     output[offset + 1] = green;
     output[offset + 2] = blue;
     let alpha = settings.transparent ? pixels[offset + 3] : 255;
-    if (settings.transparent && !isEdge && transparentBackgroundStyles.has(settings.style)) alpha = 0;
+    const isBackground = settings.style === 'stencil' ? gray[pixel] === 0 : !isEdge;
+    if (settings.transparent && isBackground && (transparentBackgroundStyles.has(settings.style) || settings.style === 'technical' || settings.style === 'stencil')) alpha = 0;
     output[offset + 3] = alpha;
   }
   return output;
@@ -311,12 +318,15 @@ self.onmessage = ({ data: job }) => {
   const gray = makeGrayscale(pixels, width * height);
   const adjusted = settings.autoNormalize ? normalizeContrast(adjustGrayscale(gray, settings)) : adjustGrayscale(gray, settings);
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
-  const specialized = workspaceProcess(smoothed, width, height, settings);
-  const detected = specialized.edge || detectEdges(smoothed, width, height, settings);
+  const offset = settings.workspaceMode === 'stencil' ? 0 : Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
+  const adjustedSettings = { ...settings, low: Math.max(0, Math.min(255, Number(settings.low) + offset)), high: Math.max(1, Math.min(255, Number(settings.high) + offset)) };
+  const specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
+  const detected = specialized.edge || detectEdges(smoothed, width, height, adjustedSettings);
   const refined = settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
   const edge = settings.workspaceMode === 'bold-outline' ? refined : thickenEdges(refined, width, height, settings.edgeThickness);
   const modeStyle = settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'stencil' ? 'stencil' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : settings.style;
-  const output = makeOutput(pixels, specialized.tone || adjusted, edge, width, height, { ...settings, style: modeStyle });
-  if (settings.workspaceMode === 'blueprint') blueprintGrid(output, width, height, settings);
+  const tone = settings.workspaceMode === 'stencil' ? thickenEdges(specialized.tone || adjusted, width, height, settings.edgeThickness) : (specialized.tone || adjusted);
+  const output = makeOutput(pixels, tone, edge, width, height, { ...settings, style: modeStyle });
+  if (settings.blueprintGrid) blueprintGrid(output, width, height, settings);
   self.postMessage({ id, width, height, gray, edge, output }, [gray.buffer, edge.buffer, output.buffer]);
 };
