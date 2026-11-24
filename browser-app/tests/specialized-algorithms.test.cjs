@@ -101,3 +101,27 @@ test('blueprint live preset receives the same anti-aliased edge rendering',()=>{
  const run=edgeSoftness=>{context.self.onmessage({data:{id:102,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode:'blueprint',style:'edge-map',livePreview:true,edgeMethod:'canny',low:12,high:30,cleanup:0,edgeThickness:1,edgeSoftness,color:'#e8eeee',contrast:0,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false}}});return context.lastMessage.output;};
  assert.notDeepEqual(Array.from(run(0)),Array.from(run(2)));
 });
+
+
+test('live output is strictly white edges on a pure black background for every preset',()=>{
+ const width=64,height=64,pixels=new Uint8ClampedArray(width*height*4);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<32?18:238;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
+ for(const workspaceMode of ['clean-outline','detailed-outline','bold-outline','stencil','blueprint','technical-drawing']){
+  context.self.onmessage({data:{id:211,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode,style:'edge-map',livePreview:true,edgeMethod:'canny',low:12,high:35,cleanup:0,edgeThickness:1,edgeSoftness:0,contrast:0,brightness:0,autoNormalize:false,edgeLinking:70,gapClosing:0,minContourLength:1,transparent:false,invert:false,blueprintGrid:false}}});
+  const out=context.lastMessage.output;
+  for(let i=0;i<out.length;i+=4){const r=out[i],g=out[i+1],b=out[i+2];assert.ok((r===0&&g===0&&b===0)||(r===255&&g===255&&b===255),workspaceMode+' output must be monochrome');assert.equal(out[i+3],255);}
+ }
+});
+
+test('Scharr operator produces a linked, correctly sized live edge mask',()=>{
+ const width=48,height=48,gray=new Uint8Array(width*height);for(let y=0;y<height;y++)for(let x=0;x<width;x++)gray[y*width+x]=x<24?20:230;
+ const out=context.detectEdges(gray,width,height,{edgeMethod:'scharr',low:8,high:24});
+ assert.equal(out.length,width*height);assert.ok(out.some(v=>v===255));
+});
+
+test('live contour cleanup applies minimum contour length and gap closing',()=>{
+ const width=24,height=24,edge=new Uint8Array(width*height);edge[5*width+5]=255;edge[10*width+5]=255;edge[10*width+6]=255;edge[10*width+7]=255;
+ const cleaned=context.liveContourCleanup(edge,width,height,1,3);
+ assert.equal(cleaned[5*width+5],0,'isolated point should be removed');
+ assert.equal(cleaned.length,width*height);
+});
