@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const context = { self: {}, importScripts() {}, console, Math, Uint8Array, Uint32Array, Uint8ClampedArray, Float32Array, Int32Array, Set };
+const context = { self: {}, importScripts() {}, console, Math, Uint8Array, Uint32Array, Uint8ClampedArray, Float32Array, Int32Array, Set };\ncontext.self.postMessage = (message) => { context.lastMessage = message; };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, 'processor-worker.js'), 'utf8').replace("importScripts('./specialized-algorithms.js');", ''), context);
 vm.runInContext(fs.readFileSync(path.join(root, 'specialized-algorithms.js'), 'utf8'), context);
@@ -67,3 +67,5 @@ test('standard edge methods continue to produce correctly sized masks', () => {
     assert.equal(out.length,f.data.length);
   }
 });
+
+test('worker returns complete synchronized grayscale, edge and output buffers for every preset',()=>{const width=48,height=48,pixels=new Uint8ClampedArray(width*height*4);for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<24?35:220;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}for(const workspaceMode of ['clean-outline','detailed-outline','bold-outline','stencil','blueprint','technical-drawing','sketch']){context.self.onmessage({data:{id:7,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode,style:'outline',edgeMethod:'canny',low:28,high:78,cleanup:1,edgeThickness:2,color:'#38e0bf',contrast:12,brightness:0,stencilOffset:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:workspaceMode==='blueprint',gridSpacing:32,morphology:'close',sketchVariant:'pencil'}}});const result=context.lastMessage;assert.equal(result.width,width);assert.equal(result.height,height);assert.equal(result.gray.length,width*height);assert.equal(result.edge.length,width*height);assert.equal(result.output.length,width*height*4);}});
