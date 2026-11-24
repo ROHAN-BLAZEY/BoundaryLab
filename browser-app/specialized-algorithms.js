@@ -91,7 +91,9 @@ function workspaceProcess(gray,width,height,settings) {
   else if(mode==='sketch') {tone=makeSketchTone(gray,width,height,settings.sketchVariant||'pencil');edge=detectEdges(gray,width,height,{...settings,edgeMethod:'sobel'});}
   else if(mode==='technical-drawing'||mode==='blueprint') edge=cleanSpecks(refineEdges(multiScaleEdges(gray,width,height,settings),width,height,'close',2),width,height,2);
   else if(mode==='stencil') {
-    tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);\n    tone=thickenEdges(tone,width,height,Math.max(1,Number(settings.edgeThickness)||1));\n    edge=new Uint8Array(tone.length);
+    tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);
+    tone=thickenEdges(tone,width,height,Math.max(1,Number(settings.edgeThickness)||1));
+    edge=new Uint8Array(tone.length);
     for(let y=1;y<height-1;y++) for(let x=1;x<width-1;x++) {
       const i=y*width+x,v=tone[i];
       if(v!==tone[i-1]||v!==tone[i+1]||v!==tone[i-width]||v!==tone[i+width]) edge[i]=255;
