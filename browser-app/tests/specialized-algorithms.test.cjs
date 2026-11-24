@@ -70,3 +70,13 @@ test('standard edge methods continue to produce correctly sized masks', () => {
 });
 
 test('worker returns complete synchronized grayscale, edge and output buffers for every preset',()=>{const width=48,height=48,pixels=new Uint8ClampedArray(width*height*4);for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<24?35:220;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}for(const workspaceMode of ['clean-outline','detailed-outline','bold-outline','stencil','blueprint','technical-drawing','sketch']){context.self.onmessage({data:{id:7,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode,style:'outline',edgeMethod:'canny',low:28,high:78,cleanup:1,edgeThickness:2,color:'#38e0bf',contrast:12,brightness:0,stencilOffset:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:workspaceMode==='blueprint',gridSpacing:32,morphology:'close',sketchVariant:'pencil'}}});const result=context.lastMessage;assert.equal(result.width,width);assert.equal(result.height,height);assert.equal(result.gray.length,width*height);assert.equal(result.edge.length,width*height);assert.equal(result.output.length,width*height*4);}});
+
+test('live edge-map output uses a dark field and adjustable soft edge halo',()=>{
+ const width=48,height=48,pixels=new Uint8ClampedArray(width*height*4);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<24?25:230;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
+ const run=edgeSoftness=>{context.self.onmessage({data:{id:99,pixels:pixels.buffer.slice(0),width,height,sentAt:123,settings:{workspaceMode:'clean-outline',style:'edge-map',livePreview:true,edgeMethod:'canny',low:18,high:45,cleanup:0,edgeThickness:1,edgeSoftness,color:'#e8eeee',contrast:12,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false}}});return context.lastMessage;};
+ const crisp=run(0),soft=run(2);
+ assert.equal(crisp.sentAt,123);
+ assert.equal(crisp.output.length,width*height*4);
+ assert.notDeepEqual(Array.from(crisp.output),Array.from(soft.output));
+});
