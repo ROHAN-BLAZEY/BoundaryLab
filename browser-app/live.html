@@ -2,48 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101719"><meta name="description" content="Real-time, local camera image processing in BoundaryLab.">
+<meta name="theme-color" content="#101719"><meta name="description" content="Real-time, local camera edge segmentation in BoundaryLab.">
 <title>Live Studio | BoundaryLab</title>
 <link rel="stylesheet" href="public.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="live-studio.css">
 </head>
 <body data-page="live">
 <div data-site-header></div>
 <main class="live-page">
-<section class="page-hero"><p class="eyebrow">LIVE CAMERA WORKSPACE</p><h1>Live Studio</h1><p>Preview your camera in colour, grayscale and processed edge views at the same time. Processing runs locally on your device.</p></section>
+<section class="page-hero"><p class="eyebrow">REAL-TIME IMAGE ENGINE</p><h1>Live Studio</h1><p>See your camera, grayscale conversion and live edge segmentation together. Processing stays on your device.</p></section>
 <section class="live-workspace">
 <div class="live-toolbar">
-<button class="button primary" id="startCamera" type="button">Start camera</button>
-<button class="button" id="stopCamera" type="button" disabled>Stop camera</button>
-<button class="button" id="captureFrame" type="button" disabled>Capture processed frame</button>
-<label class="live-camera-select">Camera <select id="cameraFacing"><option value="environment">Back camera</option><option value="user">Front camera</option></select></label>
+<button class="button primary" id="startCamera" type="button">Start camera</button><button class="button" id="stopCamera" type="button" disabled>Stop camera</button><button class="button" id="captureFrame" type="button" disabled>Capture edge map</button>
+<label class="live-camera-select">Camera<select id="cameraFacing"><option value="environment">Back camera</option><option value="user">Front camera</option></select></label>
 </div>
-<p class="live-status" id="liveStatus" role="status" aria-live="polite">Camera is stopped. HTTPS and camera permission are required.</p>
-<div class="live-metrics"><span id="liveFps">0 FPS</span><span id="liveResolution">Waiting for camera</span><span id="liveDevice">Device adaptive</span></div>
+<p class="live-status" id="liveStatus" role="status" aria-live="polite">Ready. Start the camera to begin.</p>
+<div class="live-metrics"><span id="liveFps">0 FPS processed</span><span id="liveResolution">Waiting for camera</span><span id="liveDevice">Detecting device</span><span id="liveLatency">0 ms latency</span></div>
 <div class="live-frames">
-<article class="live-frame"><div class="live-frame-heading"><b>01 · ORIGINAL COLOUR</b><span>Camera stream</span></div><div class="live-canvas-wrap"><canvas id="liveColor" aria-label="Live original colour camera frame"></canvas></div></article>
-<article class="live-frame"><div class="live-frame-heading"><b>02 · GRAYSCALE</b><span>Intensity view</span></div><div class="live-canvas-wrap"><canvas id="liveGray" aria-label="Live grayscale camera frame"></canvas></div></article>
-<article class="live-frame"><div class="live-frame-heading"><b>03 · PROCESSED</b><span>Selected preset</span></div><div class="live-canvas-wrap"><canvas id="liveOutput" aria-label="Live processed edge segmentation frame"></canvas></div></article>
+<article class="live-frame"><div class="live-frame-heading"><b>01 · COLOUR</b><span>Live camera</span></div><div class="live-canvas-wrap"><canvas id="liveColor" aria-label="Live original colour camera frame"></canvas></div></article>
+<article class="live-frame"><div class="live-frame-heading"><b>02 · GRAYSCALE</b><span>Processed frame</span></div><div class="live-canvas-wrap"><canvas id="liveGray" aria-label="Live grayscale camera frame"></canvas></div></article>
+<article class="live-frame live-frame-result"><div class="live-frame-heading"><b>03 · EDGE SEGMENTATION</b><span id="livePresetName">Clean Outline</span></div><div class="live-canvas-wrap"><canvas id="liveOutput" aria-label="Live white edge segmentation on black background"></canvas></div></article>
 </div>
 <video id="liveVideo" playsinline muted aria-hidden="true"></video>
 <div class="live-settings">
-<div class="live-settings-heading"><div><p class="eyebrow">REAL-TIME PROCESSING</p><h2>Camera controls</h2></div><button class="text-button" id="liveReset" type="button">Reset controls</button></div>
+<div class="live-settings-heading"><div><p class="eyebrow">TUNE YOUR LIVE RESULT</p><h2>Processing controls</h2></div><button class="text-button" id="liveReset" type="button">Reset settings</button></div>
 <div class="live-control-grid">
 <label>Preset<select id="liveMode"><option value="clean-outline">Clean Outline</option><option value="detailed-outline">Detailed Outline</option><option value="bold-outline">Bold Outline</option><option value="stencil">Stencil</option><option value="blueprint">Blueprint</option><option value="technical-drawing">Technical Drawing</option></select></label>
-<label>Processing rate <output id="fpsValue">12 FPS</output><input id="liveFpsLimit" type="range" min="5" max="24" value="12"></label>
-<label>Preview resolution<select id="liveResolutionSelect"><option value="480">Fast · 480 px</option><option value="640" selected>Balanced · 640 px</option><option value="960">Detailed · 960 px</option></select></label>
-<label>Edge sensitivity <output id="lowValue">28</output><input id="liveLow" type="range" min="0" max="180" value="28"></label>
-<label>Strong edge threshold <output id="highValue">78</output><input id="liveHigh" type="range" min="1" max="255" value="78"></label>
-<label>Noise smoothing <output id="smoothValue">1</output><input id="liveSmooth" type="range" min="0" max="4" value="1"></label>
-<label>Line thickness <output id="thicknessValue">1</output><input id="liveThickness" type="range" min="1" max="5" value="1"></label>
-<label>Output colour<input id="liveColor" type="color" value="#38e0bf"></label>
-<label>Contrast <output id="contrastValue">12</output><input id="liveContrast" type="range" min="-100" max="100" value="12"></label>
-<label>Brightness <output id="brightnessValue">0</output><input id="liveBrightness" type="range" min="-100" max="100" value="0"></label>
-<label>Stencil threshold offset <output id="stencilValue">0</output><input id="liveStencilOffset" type="range" min="-80" max="80" value="0"></label>
-<label class="live-toggle"><input id="liveNormalize" type="checkbox"> Normalize contrast</label>
-<label class="live-toggle"><input id="liveInvert" type="checkbox"> Invert output</label>
+<label>Performance<select id="livePerformance"><option value="smooth">Smooth · phone friendly</option><option value="balanced" selected>Balanced</option><option value="detail">Fine detail</option></select></label>
+<label>Processing FPS <output id="fpsValue">12</output><input id="liveFpsLimit" type="range" min="5" max="24" value="12"></label>
+<label>Processing resolution<select id="liveResolutionSelect"><option value="360">Fast · 360 px</option><option value="480">Balanced · 480 px</option><option value="640" selected>Detail · 640 px</option><option value="800">High · 800 px</option></select></label>
+<label>Edge sensitivity <output id="lowValue">28</output><input id="liveLow" type="range" min="1" max="160" value="28"></label>
+<label>Edge strength <output id="highValue">78</output><input id="liveHigh" type="range" min="10" max="240" value="78"></label>
+<label>Noise reduction <output id="smoothValue">1</output><input id="liveSmooth" type="range" min="0" max="3" value="1"></label>
+<label>Line thickness <output id="thicknessValue">1</output><input id="liveThickness" type="range" min="1" max="3" value="1"></label>
+<label>Edge colour<input id="liveColor" type="color" value="#e8eeee"></label>
+<label>Contrast <output id="contrastValue">12</output><input id="liveContrast" type="range" min="-40" max="80" value="12"></label>
+<label>Brightness <output id="brightnessValue">0</output><input id="liveBrightness" type="range" min="-50" max="50" value="0"></label>
+<label>Stencil threshold <output id="stencilValue">0</output><input id="liveStencilOffset" type="range" min="-60" max="60" value="0"></label>
+<label class="live-toggle"><input id="liveNormalize" type="checkbox" checked> Auto contrast</label>
+<label class="live-toggle"><input id="liveInvert" type="checkbox"> Invert edge map</label>
 <label class="live-toggle"><input id="liveGrid" type="checkbox"> Blueprint grid</label>
 </div>
-<p class="live-help">Higher resolution and frame rates use more processing power. BoundaryLab automatically uses a conservative starting profile on phones and lower-powered devices.</p>
+<div class="live-tuning-note"><strong>Tip</strong><span>Start with Clean Outline. Increase sensitivity to reveal fine details; raise edge strength to remove weaker lines. Use Smooth mode if your phone gets warm or the preview begins to lag.</span></div>
 </div>
 </section>
 <div class="actions"><a class="button" href="/studio">Go to Image Studio</a><a class="button" href="/gallery-technology">Gallery &amp; Technology</a></div>
