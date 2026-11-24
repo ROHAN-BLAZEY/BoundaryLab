@@ -87,7 +87,7 @@ worker.onmessage=({data})=>{
  for(let i=0,j=0;i<data.gray.length;i++,j+=4){const v=data.gray[i];grayRgba[j]=grayRgba[j+1]=grayRgba[j+2]=v;grayRgba[j+3]=255;}
  ctx.gray.putImageData(new ImageData(grayRgba,data.width,data.height),0,0);
  ctx.output.putImageData(new ImageData(data.output,data.width,data.height),0,0);
- latest={width:data.width,height:data.height,pixels:data.output.slice()};
+ latest={width:data.width,height:data.height,pixels:data.output.slice()};capture.disabled=false;
  processedFrames++;updateMetrics(performance.now());
 };
 worker.onerror=()=>{busy=false;say('The live image processor stopped unexpectedly. Refresh Live Studio and try again.');};
