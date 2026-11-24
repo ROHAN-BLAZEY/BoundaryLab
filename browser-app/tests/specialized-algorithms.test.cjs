@@ -94,3 +94,10 @@ test('live preview bypasses expensive multi-scale still-image algorithms',()=>{
   assert.equal(result.gray.length,width*height);
  } finally { context.workspaceProcess=original; }
 });
+
+test('blueprint live preset receives the same anti-aliased edge rendering',()=>{
+ const width=40,height=40,pixels=new Uint8ClampedArray(width*height*4);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<20?15:240;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
+ const run=edgeSoftness=>{context.self.onmessage({data:{id:102,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode:'blueprint',style:'edge-map',livePreview:true,edgeMethod:'canny',low:12,high:30,cleanup:0,edgeThickness:1,edgeSoftness,color:'#e8eeee',contrast:0,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false}}});return context.lastMessage.output;};
+ assert.notDeepEqual(Array.from(run(0)),Array.from(run(2)));
+});
