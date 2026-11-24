@@ -11,9 +11,9 @@ const mobile=matchMedia('(max-width:700px)').matches||matchMedia('(pointer:coars
 const memory=navigator.deviceMemory||4,cores=navigator.hardwareConcurrency||4;
 const constrained=memory<=3||cores<=4;
 const deviceLabel=mobile?'Mobile device':(constrained?'Laptop · efficiency mode':'Desktop / laptop');
-let stream=null,raf=0,stopped=true,busy=false,job=0,lastProcess=0,lastMetrics=0,processedFrames=0,processedFps=0,latency=0,slowStreak=0,fastStreak=0,adaptiveScale=1,latest=null,activeWidth=0,activeHeight=0;
+let stream=null,raf=0,stopped=true,busy=false,job=0,lastProcess=0,lastMetrics=0,processedFrames=0,processedFps=0,latency=0,slowStreak=0,fastStreak=0,adaptiveScale=1,latest=null,lastEdge=null,activeWidth=0,activeHeight=0;
 const say=message=>{status.textContent=message;};
-const settingsIds=['liveMode','livePerformance','liveDetail','liveEdgeMethod','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveLinking','liveSmooth','liveGapClosing','liveMinContour','liveThickness','liveEdgeSoftness','liveContrast','liveBrightness','liveNormalize'];
+const settingsIds=['liveMode','livePerformance','liveDetail','liveEdgeMethod','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveLinking','liveTemporal','liveSmooth','liveGapClosing','liveMinContour','liveThickness','liveEdgeSoftness','liveContrast','liveBrightness','liveNormalize'];
 const presets={
  'clean-outline':{low:24,high:68,smooth:1,thickness:1,contrast:8,edgeMethod:'canny',edgeLinking:72,gapClosing:1,minContourLength:4},
  'detailed-outline':{low:14,high:48,smooth:0,thickness:1,contrast:15,edgeMethod:'scharr',edgeLinking:82,gapClosing:0,minContourLength:2},
@@ -23,7 +23,7 @@ const presets={
  'technical-drawing':{low:18,high:58,smooth:1,thickness:1,contrast:14,edgeMethod:'scharr',edgeLinking:84,gapClosing:1,minContourLength:3}
 };
 function updateLabels(){
- for(const [id,out] of [['liveDetail','detailValue'],['liveFpsLimit','fpsValue'],['liveLow','lowValue'],['liveHigh','highValue'],['liveLinking','linkValue'],['liveSmooth','smoothValue'],['liveGapClosing','gapValue'],['liveMinContour','contourValue'],['liveThickness','thicknessValue'],['liveEdgeSoftness','softnessValue'],['liveContrast','contrastValue'],['liveBrightness','brightnessValue']])$('#'+out).textContent=$('#'+id).value;
+ for(const [id,out] of [['liveDetail','detailValue'],['liveFpsLimit','fpsValue'],['liveLow','lowValue'],['liveHigh','highValue'],['liveLinking','linkValue'],['liveTemporal','temporalValue'],['liveSmooth','smoothValue'],['liveGapClosing','gapValue'],['liveMinContour','contourValue'],['liveThickness','thicknessValue'],['liveEdgeSoftness','softnessValue'],['liveContrast','contrastValue'],['liveBrightness','brightnessValue']])$('#'+out).textContent=$('#'+id).value;
  $('#livePresetName').textContent=$('#liveMode').selectedOptions[0].textContent;
 }
 function setCanvasSize(canvas,w,h){if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
@@ -37,7 +37,7 @@ function selectedProfile(){
 function setProfile(){const p=selectedProfile();$('#liveFpsLimit').value=p.fps;$('#liveResolutionSelect').value=String(p.res);updateLabels();}
 function currentSettings(){
  const low=Number($('#liveLow').value),high=Math.max(low+1,Number($('#liveHigh').value));
- return {workspaceMode:$('#liveMode').value,style:'edge-map',livePreview:true,edgeMethod:$('#liveEdgeMethod').value,low,high,cleanup:Number($('#liveSmooth').value),edgeThickness:Number($('#liveThickness').value),edgeSoftness:Number($('#liveEdgeSoftness').value),contrast:Number($('#liveContrast').value),brightness:Number($('#liveBrightness').value),autoNormalize:$('#liveNormalize').checked,edgeLinking:Number($('#liveLinking').value),gapClosing:Number($('#liveGapClosing').value),minContourLength:Number($('#liveMinContour').value),invert:false,transparent:false,blueprintGrid:false,morphology:'close'};
+ return {workspaceMode:$('#liveMode').value,style:'edge-map',livePreview:true,edgeMethod:$('#liveEdgeMethod').value,low,high,cleanup:Number($('#liveSmooth').value),edgeThickness:Number($('#liveThickness').value),edgeSoftness:Number($('#liveEdgeSoftness').value),contrast:Number($('#liveContrast').value),brightness:Number($('#liveBrightness').value),autoNormalize:$('#liveNormalize').checked,edgeLinking:Number($('#liveLinking').value),gapClosing:Number($('#liveGapClosing').value),minContourLength:Number($('#liveMinContour').value),temporalStability:Number($('#liveTemporal').value),invert:false,transparent:false,blueprintGrid:false,morphology:'close'};
 }
 function updateMetrics(now){
  if(now-lastMetrics<800)return;processedFps=processedFrames*1000/Math.max(1,now-lastMetrics);processedFrames=0;lastMetrics=now;
@@ -78,7 +78,8 @@ function frameLoop(now){
  try{image=workCtx.getImageData(0,0,d.width,d.height);}catch(error){say('The browser could not read the camera frame. Restart the camera and check site permissions.');return;}
  const id=++job,buffer=image.data.buffer.slice(image.data.byteOffset,image.data.byteOffset+image.data.byteLength);
  busy=true;
- worker.postMessage({id,pixels:buffer,width:d.width,height:d.height,settings:currentSettings(),sentAt:performance.now()},[buffer]);
+ const previousBuffer=lastEdge?lastEdge.slice().buffer:null;
+ worker.postMessage({id,pixels:buffer,previousEdge:previousBuffer,width:d.width,height:d.height,settings:currentSettings(),sentAt:performance.now()},previousBuffer?[buffer,previousBuffer]:[buffer]);
 }
 worker.onmessage=({data})=>{
  if(stopped||data.id!==job)return;
@@ -91,12 +92,13 @@ worker.onmessage=({data})=>{
  setCanvasSize(canvases.output,display.width,display.height);
  ctx.output.imageSmoothingEnabled=true;ctx.output.imageSmoothingQuality='high';
  ctx.output.clearRect(0,0,display.width,display.height);ctx.output.drawImage(resultCanvas,0,0,display.width,display.height);
+ lastEdge=data.edge?data.edge.slice():lastEdge;
  latest={width:data.width,height:data.height,pixels:data.output.slice()};capture.disabled=false;
  processedFrames++;updateMetrics(performance.now());
 };
 worker.onerror=()=>{busy=false;say('The live image processor stopped unexpectedly. Refresh Live Studio and try again.');};
 function stopCamera(message='Camera stopped.'){
- stopped=true;job++;latest=null;cancelAnimationFrame(raf);
+ stopped=true;job++;latest=null;lastEdge=null;cancelAnimationFrame(raf);
  if(stream)stream.getTracks().forEach(track=>track.stop());
  stream=null;video.srcObject=null;busy=false;start.disabled=false;stop.disabled=true;capture.disabled=true;
  $('#liveCameraFps').textContent='Camera · idle';$('#liveFps').textContent='0 FPS processed';$('#liveLatency').textContent='0 ms latency';
@@ -108,7 +110,7 @@ async function startCamera(){
  try{
   const preferred=mobile?720:1280;
   stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:$('#cameraFacing').value},width:{ideal:preferred},height:{ideal:mobile?480:540},frameRate:{ideal:30,max:30}}});
-  video.srcObject=stream;await video.play();stopped=false;latest=null;adaptiveScale=1;slowStreak=0;fastStreak=0;busy=false;
+  video.srcObject=stream;await video.play();stopped=false;latest=null;lastEdge=null;adaptiveScale=1;slowStreak=0;fastStreak=0;busy=false;
   const track=stream.getVideoTracks()[0],trackSettings=track.getSettings();$('#liveCameraFps').textContent='Camera · '+Math.round(trackSettings.frameRate||30)+' FPS';
   activeWidth=trackSettings.width||video.videoWidth;activeHeight=trackSettings.height||video.videoHeight;
   track.addEventListener('ended',()=>{if(!stopped)stopCamera('Camera stream ended. Start the camera again to continue.');},{once:true});
@@ -134,7 +136,7 @@ function applyPreset(){
 }
 function resetSettings(){
  $('#liveMode').value='clean-outline';$('#livePerformance').value='balanced';$('#liveDetail').value=50;setProfile();
- $('#liveEdgeMethod').value='canny';$('#liveLinking').value=72;$('#liveGapClosing').value=1;$('#liveMinContour').value=4;
+ $('#liveEdgeMethod').value='canny';$('#liveLinking').value=72;$('#liveTemporal').value=35;$('#liveGapClosing').value=1;$('#liveMinContour').value=4;
  $('#liveBrightness').value=0;$('#liveEdgeSoftness').value=0;$('#liveThickness').value=1;$('#liveNormalize').checked=true;
  applyPreset();updateLabels();say(stream?'Settings reset · live processing continues.':'Settings reset.');
 }
