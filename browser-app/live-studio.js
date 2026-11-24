@@ -95,7 +95,7 @@ function stopCamera(message='Camera stopped.'){
  stopped=true;job++;latest=null;cancelAnimationFrame(raf);
  if(stream)stream.getTracks().forEach(track=>track.stop());
  stream=null;video.srcObject=null;busy=false;start.disabled=false;stop.disabled=true;capture.disabled=true;
- $('#liveFps').textContent='0 FPS processed';$('#liveLatency').textContent='0 ms latency';
+ $('#liveCameraFps').textContent='Camera · idle';$('#liveFps').textContent='0 FPS processed';$('#liveLatency').textContent='0 ms latency';
  say(message);
 }
 async function startCamera(){
@@ -105,7 +105,7 @@ async function startCamera(){
   const preferred=mobile?640:960;
   stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:$('#cameraFacing').value},width:{ideal:preferred},height:{ideal:mobile?480:540},frameRate:{ideal:30,max:30}}});
   video.srcObject=stream;await video.play();stopped=false;latest=null;adaptiveScale=1;slowStreak=0;fastStreak=0;busy=false;
-  const track=stream.getVideoTracks()[0],trackSettings=track.getSettings();
+  const track=stream.getVideoTracks()[0],trackSettings=track.getSettings();$('#liveCameraFps').textContent='Camera · '+Math.round(trackSettings.frameRate||30)+' FPS';
   activeWidth=trackSettings.width||video.videoWidth;activeHeight=trackSettings.height||video.videoHeight;
   track.addEventListener('ended',()=>{if(!stopped)stopCamera('Camera stream ended. Start the camera again to continue.');},{once:true});
   start.disabled=true;stop.disabled=false;capture.disabled=true;
