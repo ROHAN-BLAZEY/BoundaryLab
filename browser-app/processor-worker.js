@@ -317,6 +317,6 @@ self.onmessage = ({ data: job }) => {
   const edge = settings.workspaceMode === 'bold-outline' ? refined : thickenEdges(refined, width, height, settings.edgeThickness);
   const modeStyle = settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'stencil' ? 'stencil' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : settings.style;
   const output = makeOutput(pixels, specialized.tone || adjusted, edge, width, height, { ...settings, style: modeStyle });
-  if (settings.workspaceMode === 'blueprint') blueprintGrid(output, width, height, settings);
+  if (settings.workspaceMode === 'blueprint') {\n    blueprintGrid(output, width, height, settings);\n    if (settings.sheetFrame) drawSheetFrame(output, width, height, true);\n  } else if (settings.workspaceMode === 'technical-drawing' && settings.sheetFrame) {\n    drawSheetFrame(output, width, height, false);\n  }
   self.postMessage({ id, width, height, gray, edge, output }, [gray.buffer, edge.buffer, output.buffer]);
 };

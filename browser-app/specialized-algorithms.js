@@ -78,12 +78,20 @@ function workspaceProcess(gray,width,height,settings) {
   if(mode==='clean-outline') {
     edge=detectEdges(edgeAwareSmooth(gray,width,height),width,height,{...settings,edgeMethod:'canny',low:Math.max(10,settings.low),high:Math.max(settings.low+18,settings.high)});
     edge=refineEdges(edge,width,height,'close',2);
-  } else if(mode==='detailed-outline') edge=refineEdges(multiScaleEdges(gray,width,height,settings),width,height,'close',1);
+  } else if(mode==='detailed-outline') {
+    edge=multiScaleEdges(gray,width,height,settings);
+    const textureSensitivity=Math.max(0,Math.min(100,Number(settings.textureSensitivity)||0));
+    if(textureSensitivity>0) {
+      const texture=detectEdges(gray,width,height,{...settings,edgeMethod:'laplacian',low:Math.max(2,Math.round(34-textureSensitivity*.3)),high:255});
+      for(let i=0;i<edge.length;i++) if(texture[i]) edge[i]=255;
+    }
+    edge=cleanSpecks(refineEdges(edge,width,height,'close',1),width,height,textureSensitivity>65?2:3);
+  }
   else if(mode==='bold-outline') edge=thickenEdges(cleanSpecks(refineEdges(detectEdges(smooth(gray,width,height,1),width,height,{...settings,edgeMethod:'canny'}),width,height,'close',2),width,height,2),width,height,Math.max(2,settings.edgeThickness));
   else if(mode==='sketch') {tone=makeSketchTone(gray,width,height,settings.sketchVariant||'pencil');edge=detectEdges(gray,width,height,{...settings,edgeMethod:'sobel'});}
   else if(mode==='technical-drawing'||mode==='blueprint') edge=cleanSpecks(refineEdges(multiScaleEdges(gray,width,height,settings),width,height,'close',2),width,height,2);
   else if(mode==='stencil') {
-    tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0); edge=new Uint8Array(tone.length);
+    tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);\n    tone=thickenEdges(tone,width,height,Math.max(1,Number(settings.edgeThickness)||1));\n    edge=new Uint8Array(tone.length);
     for(let y=1;y<height-1;y++) for(let x=1;x<width-1;x++) {
       const i=y*width+x,v=tone[i];
       if(v!==tone[i-1]||v!==tone[i+1]||v!==tone[i-width]||v!==tone[i+width]) edge[i]=255;
@@ -96,5 +104,28 @@ function blueprintGrid(output,width,height,settings) {
   const step=Math.max(12,Math.round(Number(settings.gridSpacing)||32));
   for(let y=0;y<height;y++) for(let x=0;x<width;x++) if(x%step===0||y%step===0) {
     const i=(y*width+x)*4; output[i]=Math.min(255,output[i]+9);output[i+1]=Math.min(255,output[i+1]+16);output[i+2]=Math.min(255,output[i+2]+24);
+  }
+}
+
+function drawSheetFrame(output,width,height,blueprint=false) {
+  const color=blueprint?[235,246,245]:[24,24,24];
+  const inset=Math.max(4,Math.round(Math.min(width,height)*0.025));
+  const put=(x,y)=>{
+    if(x<0||x>=width||y<0||y>=height)return;
+    const i=(y*width+x)*4;
+    output[i]=color[0];output[i+1]=color[1];output[i+2]=color[2];output[i+3]=255;
+  };
+  const rect=(x1,y1,x2,y2)=>{
+    for(let x=x1;x<=x2;x++){put(x,y1);put(x,y2);}
+    for(let y=y1;y<=y2;y++){put(x1,y);put(x2,y);}
+  };
+  rect(inset,inset,width-inset-1,height-inset-1);
+  if(width>160&&height>120){
+    const blockW=Math.round(width*.28),blockH=Math.round(height*.09);
+    const x1=width-inset-blockW,y1=height-inset-blockH,x2=width-inset-1,y2=height-inset-1;
+    rect(x1,y1,x2,y2);
+    const splitX=Math.round(x1+blockW*.62),splitY=Math.round(y1+blockH*.55);
+    for(let y=y1;y<=y2;y++)put(splitX,y);
+    for(let x=x1;x<=x2;x++)put(x,splitY);
   }
 }
