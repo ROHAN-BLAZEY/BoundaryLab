@@ -141,6 +141,30 @@ function hysteresis(thin, width, height, low, high) {
   return edge;
 }
 
+function scharrMagnitude(gray, width, height) {
+  const magnitude = new Float32Array(width * height), direction = new Uint8Array(width * height);
+  for (let y=1;y<height-1;y++) for (let x=1;x<width-1;x++) {
+    const i=y*width+x;
+    const gx=-3*gray[i-width-1]+3*gray[i-width+1]-10*gray[i-1]+10*gray[i+1]-3*gray[i+width-1]+3*gray[i+width+1];
+    const gy=-3*gray[i-width-1]-10*gray[i-width]-3*gray[i-width+1]+3*gray[i+width-1]+10*gray[i+width]+3*gray[i+width+1];
+    magnitude[i]=Math.min(255,Math.hypot(gx,gy)/16);
+    let angle=Math.atan2(gy,gx)*180/Math.PI;if(angle<0)angle+=180;
+    direction[i]=angle<22.5||angle>=157.5?0:angle<67.5?1:angle<112.5?2:3;
+  } return {magnitude,direction};
+}
+
+function liveContourCleanup(edge,width,height,gapClosing,minLength) {
+  let current=edge;const gap=Math.max(0,Math.min(2,Number(gapClosing)||0));
+  for(let pass=0;pass<gap;pass++){current=erode(dilate(current,width,height),width,height);}
+  const minimum=Math.max(1,Math.min(500,Number(minLength)||1));if(minimum<=1)return current;
+  const output=current.slice(),seen=new Uint8Array(current.length),queue=new Int32Array(current.length);
+  for(let start=0;start<current.length;start++){if(!current[start]||seen[start])continue;let head=0,tail=0;queue[tail++]=start;seen[start]=1;
+    while(head<tail){const index=queue[head++],x=index%width,y=(index-x)/width;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||nx>=width||ny<0||ny>=height)continue;const next=ny*width+nx;if(current[next]&&!seen[next]){seen[next]=1;queue[tail++]=next;}}
+    } if(tail<minimum)for(let i=0;i<tail;i++)output[queue[i]]=0;
+  } return output;
+}
+
 function detectEdges(gray, width, height, settings) {
   const low = Math.max(0, Math.min(255, Number(settings.low)));
   const high = Math.max(low, Math.min(255, Number(settings.high)));
@@ -157,7 +181,7 @@ function detectEdges(gray, width, height, settings) {
     return edge;
   }
 
-  const { magnitude, direction } = sobelMagnitude(gray, width, height);
+  const { magnitude, direction } = settings.edgeMethod === 'scharr' ? scharrMagnitude(gray, width, height) : sobelMagnitude(gray, width, height);
   const thin = thinEdges(magnitude, direction, width, height);
   if (settings.edgeMethod === 'canny') return hysteresis(thin, width, height, low, high);
   for (let i = 0; i < thin.length; i++) if (thin[i] > 0 && thin[i] >= low) edge[i] = 255;
@@ -279,9 +303,9 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
         red = green = blue = isEdge ? 20 : 255;
         break;
       case 'edge-map':
-        red = isEdge ? rgb[0] : 8;
-        green = isEdge ? rgb[1] : 13;
-        blue = isEdge ? rgb[2] : 14;
+        red = isEdge ? 255 : 0;
+        green = isEdge ? 255 : 0;
+        blue = isEdge ? 255 : 0;
         break;
       case 'overlay':
         red = isEdge ? rgb[0] : adjustChannel(pixels[offset]);
@@ -299,7 +323,7 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
     if (!isEdge && settings.softMask && (settings.style === 'edge-map' || settings.style === 'blueprint' || settings.style === 'technical')) {
       const halo = settings.softMask[pixel];
       if (halo) {
-        const base = settings.style === 'blueprint' ? [7, 26, 52] : settings.style === 'technical' ? [250, 250, 250] : [8, 13, 14];
+        const base = [0, 0, 0];
         red = Math.round(base[0] + (rgb[0] - base[0]) * halo / 255);
         green = Math.round(base[1] + (rgb[1] - base[1]) * halo / 255);
         blue = Math.round(base[2] + (rgb[2] - base[2]) * halo / 255);
@@ -337,14 +361,16 @@ self.onmessage = ({ data: job }) => {
   if (settings.livePreview) {
     // Live preview deliberately uses the fast single-scale path. The full
     // multi-scale workspace algorithms remain available to still-image work.
-    detected = detectEdges(smoothed, width, height, { ...adjustedSettings, edgeMethod: 'canny' });
+    const liveHigh = Math.max(1, Number(adjustedSettings.high) || 78);
+    const link = Math.max(0, Math.min(100, Number(settings.edgeLinking) || 65));
+    const linkedLow = Math.min(Number(adjustedSettings.low) || 28, Math.max(1, Math.round(liveHigh * (0.12 + (100 - link) * 0.004))));
+    detected = detectEdges(smoothed, width, height, { ...adjustedSettings, low: linkedLow, edgeMethod: settings.edgeMethod || 'canny' });
+    detected = liveContourCleanup(detected, width, height, settings.gapClosing, settings.minContourLength);
     if (settings.workspaceMode === 'stencil') {
       specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
       detected = specialized.edge || detected;
     }
-    modeStyle = settings.workspaceMode === 'blueprint' ? 'blueprint'
-      : settings.workspaceMode === 'technical-drawing' ? 'technical'
-      : settings.workspaceMode === 'stencil' ? 'stencil' : 'edge-map';
+    modeStyle = 'edge-map';
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : adjusted;
   } else {
     specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
@@ -366,6 +392,6 @@ self.onmessage = ({ data: job }) => {
     }
   }
   const output = makeOutput(pixels, tone, edge, width, height, { ...settings, style: modeStyle, softMask });
-  if (settings.blueprintGrid) blueprintGrid(output, width, height, settings);
+  if (settings.blueprintGrid && !settings.livePreview) blueprintGrid(output, width, height, settings);
   self.postMessage({ id, width, height, gray, edge, output, sentAt: job.sentAt || 0 }, [gray.buffer, edge.buffer, output.buffer]);
 };
