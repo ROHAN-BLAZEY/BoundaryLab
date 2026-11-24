@@ -18,13 +18,8 @@ function multiScaleEdges(gray,width,height,settings){
   const low=Math.max(4,Number(settings.low)||0),high=Math.max(low+1,Number(settings.high)||low+1);
   const fine=detectEdges(gray,width,height,{...settings,edgeMethod:'canny',low:Math.max(4,low*.72),high:Math.max(12,high*.78)});
   const coarse=detectEdges(smooth(gray,width,height,1),width,height,{...settings,edgeMethod:'sobel',low:Math.max(12,low*1.25)});
-  const out=fine.slice();
-  for(let y=2;y<height-2;y++)for(let x=2;x<width-2;x++){
-    const i=y*width+x;if(!coarse[i]||out[i])continue;
-    let supported=false;
-    for(let dy=-2;dy<=2&&!supported;dy++)for(let dx=-2;dx<=2;dx++)if(fine[(y+dy)*width+x+dx]){supported=true;break;}
-    if(supported)out[i]=255;
-  }
+  const out=fine.slice(),support=dilate(fine,width,height);
+  for(let i=0;i<out.length;i++)if(coarse[i]&&support[i])out[i]=255;
   return out;
 }
 function cleanSpecks(edge,width,height,minNeighbors=3){
