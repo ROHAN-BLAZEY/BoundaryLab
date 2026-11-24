@@ -165,6 +165,29 @@ function liveContourCleanup(edge,width,height,gapClosing,minLength) {
   } return output;
 }
 
+function stabilizeLiveEdges(edge, previous, width, height, strength) {
+  const amount = Math.max(0, Math.min(80, Number(strength) || 0));
+  if (!previous || previous.length !== edge.length || amount === 0) return edge;
+  const output = edge.slice();
+  // Keep a previous contour pixel only when the current frame still has
+  // edge evidence in its 3x3 neighbourhood. This damps flicker without
+  // carrying detached trails across moving objects.
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = y * width + x;
+      if (edge[i] || !previous[i]) continue;
+      let nearby = false;
+      for (let dy = -1; dy <= 1 && !nearby; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (edge[i + dy * width + dx]) { nearby = true; break; }
+        }
+      }
+      if (nearby && amount >= 20) output[i] = 255;
+    }
+  }
+  return output;
+}
+
 function detectEdges(gray, width, height, settings) {
   const low = Math.max(0, Math.min(255, Number(settings.low)));
   const high = Math.max(low, Math.min(255, Number(settings.high)));
@@ -347,7 +370,7 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
 }
 
 self.onmessage = ({ data: job }) => {
-  const { id, pixels: pixelBuffer, width, height, settings } = job;
+  const { id, pixels: pixelBuffer, previousEdge: previousBuffer, width, height, settings } = job;
   const pixels = new Uint8ClampedArray(pixelBuffer);
   const gray = makeGrayscale(pixels, width * height);
   const adjusted = settings.autoNormalize ? normalizeContrast(adjustGrayscale(gray, settings)) : adjustGrayscale(gray, settings);
@@ -366,6 +389,7 @@ self.onmessage = ({ data: job }) => {
     const linkedLow = Math.min(Number(adjustedSettings.low) || 28, Math.max(1, Math.round(liveHigh * (0.12 + (100 - link) * 0.004))));
     detected = detectEdges(smoothed, width, height, { ...adjustedSettings, low: linkedLow, edgeMethod: settings.edgeMethod || 'canny' });
     detected = liveContourCleanup(detected, width, height, settings.gapClosing, settings.minContourLength);
+    detected = stabilizeLiveEdges(detected, previousBuffer ? new Uint8Array(previousBuffer) : null, width, height, settings.temporalStability);
     if (settings.workspaceMode === 'stencil') {
       specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
       detected = specialized.edge || detected;
