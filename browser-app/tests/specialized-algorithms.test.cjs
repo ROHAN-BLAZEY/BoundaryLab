@@ -5,7 +5,8 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const context = { self: {}, importScripts() {}, console, Math, Uint8Array, Uint32Array, Uint8ClampedArray, Float32Array, Int32Array, Set };\ncontext.self.postMessage = (message) => { context.lastMessage = message; };
+const context = { self: {}, importScripts() {}, console, Math, Uint8Array, Uint32Array, Uint8ClampedArray, Float32Array, Int32Array, Set };
+context.self.postMessage = (message) => { context.lastMessage = message; };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, 'processor-worker.js'), 'utf8').replace("importScripts('./specialized-algorithms.js');", ''), context);
 vm.runInContext(fs.readFileSync(path.join(root, 'specialized-algorithms.js'), 'utf8'), context);
