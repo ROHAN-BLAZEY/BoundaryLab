@@ -13,7 +13,7 @@ const constrained=memory<=3||cores<=4;
 const deviceLabel=mobile?'Mobile device':(constrained?'Laptop · efficiency mode':'Desktop / laptop');
 let stream=null,raf=0,stopped=true,busy=false,job=0,lastProcess=0,lastMetrics=0,processedFrames=0,processedFps=0,latency=0,slowStreak=0,fastStreak=0,adaptiveScale=1,latest=null,activeWidth=0,activeHeight=0;
 const say=message=>{status.textContent=message;};
-const settingsIds=['liveMode','livePerformance','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveSmooth','liveThickness','liveEdgeSoftness','liveColor','liveContrast','liveBrightness','liveStencilOffset','liveNormalize','liveInvert','liveGrid'];
+const settingsIds=['liveMode','livePerformance','liveDetail','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveSmooth','liveThickness','liveEdgeSoftness','liveColor','liveContrast','liveBrightness','liveStencilOffset','liveNormalize','liveInvert','liveGrid'];
 const presets={
  'clean-outline':{low:28,high:78,smooth:1,thickness:1,contrast:12},
  'detailed-outline':{low:18,high:58,smooth:0,thickness:1,contrast:18},
@@ -23,7 +23,7 @@ const presets={
  'technical-drawing':{low:24,high:70,smooth:1,thickness:1,contrast:16}
 };
 function updateLabels(){
- for(const [id,out,suffix] of [['liveFpsLimit','fpsValue',''],['liveLow','lowValue',''],['liveHigh','highValue',''],['liveSmooth','smoothValue',''],['liveThickness','thicknessValue',''],['liveEdgeSoftness','softnessValue',''],['liveContrast','contrastValue',''],['liveBrightness','brightnessValue',''],['liveStencilOffset','stencilValue','']])$('#'+out).textContent=$('#'+id).value+suffix;
+ for(const [id,out,suffix] of [['liveDetail','detailValue',''],['liveFpsLimit','fpsValue',''],['liveLow','lowValue',''],['liveHigh','highValue',''],['liveSmooth','smoothValue',''],['liveThickness','thicknessValue',''],['liveEdgeSoftness','softnessValue',''],['liveContrast','contrastValue',''],['liveBrightness','brightnessValue',''],['liveStencilOffset','stencilValue','']])$('#'+out).textContent=$('#'+id).value+suffix;
  $('#livePresetName').textContent=$('#liveMode').selectedOptions[0].textContent;
 }
 function setCanvasSize(canvas,w,h){if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
@@ -132,8 +132,8 @@ function applyPreset(){
  updateLabels();
 }
 function resetSettings(){
- $('#liveMode').value='clean-outline';$('#livePerformance').value='balanced';setProfile();
- $('#liveColor').value='#e8eeee';$('#liveBrightness').value=0;$('#liveStencilOffset').value=0;
+ $('#liveMode').value='clean-outline';$('#livePerformance').value='balanced';$('#liveDetail').value=50;setProfile();
+ $('#liveColor').value='#e8eeee';$('#liveBrightness').value=0;$('#liveEdgeSoftness').value=1;$('#liveThickness').value=1;$('#liveStencilOffset').value=0;
  $('#liveNormalize').checked=true;$('#liveInvert').checked=false;$('#liveGrid').checked=false;
  applyPreset();updateLabels();say(stream?'Settings reset · live processing continues.':'Settings reset.');
 }
@@ -142,6 +142,7 @@ settingsIds.forEach(id=>$('#'+id).addEventListener('input',()=>{
  if(id==='liveHigh'&&Number($('#liveHigh').value)<=Number($('#liveLow').value))$('#liveLow').value=Math.max(1,Number($('#liveHigh').value)-1);
  if(id==='liveMode')applyPreset();
  if(id==='livePerformance')setProfile();
+ if(id==='liveDetail'){const value=Number($('#liveDetail').value);$('#liveLow').value=Math.round(53-.5*value);$('#liveHigh').value=Math.round(108-.6*value);}
  updateLabels();
 }));
 $('#liveReset').addEventListener('click',resetSettings);
