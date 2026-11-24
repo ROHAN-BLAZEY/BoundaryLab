@@ -328,5 +328,5 @@ self.onmessage = ({ data: job }) => {
   const tone = settings.workspaceMode === 'stencil' ? thickenEdges(specialized.tone || adjusted, width, height, settings.edgeThickness) : (specialized.tone || adjusted);
   const output = makeOutput(pixels, tone, edge, width, height, { ...settings, style: modeStyle });
   if (settings.blueprintGrid) blueprintGrid(output, width, height, settings);
-  self.postMessage({ id, width, height, gray, edge, output }, [gray.buffer, edge.buffer, output.buffer]);
+  self.postMessage({ id, width, height, gray, edge, output, sentAt: job.sentAt || 0 }, [gray.buffer, edge.buffer, output.buffer]);
 };
