@@ -8,7 +8,8 @@
   const sourceCtx = source.getContext('2d', { willReadFrequently: true });
   const grayCtx = grayCanvas.getContext('2d');
   const resultCtx = result.getContext('2d');
-  const MAX_SIDE = 960;
+  const SMALL_DEVICE = matchMedia('(max-width: 700px)').matches || (navigator.deviceMemory || 4) <= 4 || (navigator.hardwareConcurrency || 4) <= 4;
+  const MAX_SIDE = SMALL_DEVICE ? 720 : 1280;
   const worker = new Worker('./processor-worker.js');
   const GALLERY_DB = 'boundarylab-local-gallery';
   const GALLERY_STORE = 'images';
