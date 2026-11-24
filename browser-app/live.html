@@ -25,11 +25,15 @@
 <video id="liveVideo" playsinline muted aria-hidden="true"></video>
 <div class="live-settings">
 <div class="live-settings-heading"><div><p class="eyebrow">TUNE YOUR LIVE RESULT</p><h2>Processing controls</h2></div><button class="text-button" id="liveReset" type="button">Reset settings</button></div>
-<div class="live-control-grid">
+<div class="live-control-grid live-simple-controls">
 <label>Preset<select id="liveMode"><option value="clean-outline">Clean Outline</option><option value="detailed-outline">Detailed Outline</option><option value="bold-outline">Bold Outline</option><option value="stencil">Stencil</option><option value="blueprint">Blueprint</option><option value="technical-drawing">Technical Drawing</option></select></label>
-<label>Performance<select id="livePerformance"><option value="smooth">Smooth · phone friendly</option><option value="balanced" selected>Balanced</option><option value="detail">Fine detail</option></select></label>
-<label>Processing FPS <output id="fpsValue">12</output><input id="liveFpsLimit" type="range" min="5" max="24" value="12"></label>
-<label>Processing resolution<select id="liveResolutionSelect"><option value="360">Fast · 360 px</option><option value="480">Balanced · 480 px</option><option value="640" selected>Detail · 640 px</option><option value="800">High · 800 px</option></select></label>
+<label>Performance<select id="livePerformance"><option value="smooth">Smooth · best for phones</option><option value="balanced" selected>Balanced</option><option value="detail">Fine detail · more processing</option></select></label>
+<label>Edge detail <output id="detailValue">50</output><input id="liveDetail" type="range" min="0" max="100" value="50"></label>
+</div>
+<details class="live-advanced"><summary>Advanced controls <span>Thresholds, rendering and performance</span></summary>
+<div class="live-control-grid">
+<label>Processing FPS <output id="fpsValue">14</output><input id="liveFpsLimit" type="range" min="5" max="20" value="14"></label>
+<label>Processing resolution<select id="liveResolutionSelect"><option value="320">Fast · 320 px</option><option value="400" selected>Balanced · 400 px</option><option value="480">Detail · 480 px</option><option value="640">High · 640 px</option></select></label>
 <label>Edge sensitivity <output id="lowValue">28</output><input id="liveLow" type="range" min="1" max="160" value="28"></label>
 <label>Edge strength <output id="highValue">78</output><input id="liveHigh" type="range" min="10" max="240" value="78"></label>
 <label>Noise reduction <output id="smoothValue">1</output><input id="liveSmooth" type="range" min="0" max="3" value="1"></label>
@@ -43,6 +47,7 @@
 <label class="live-toggle"><input id="liveInvert" type="checkbox"> Invert edge map</label>
 <label class="live-toggle"><input id="liveGrid" type="checkbox"> Blueprint grid</label>
 </div>
+</details>
 <div class="live-tuning-note"><strong>Tip</strong><span>Start with Clean Outline. Increase sensitivity to reveal fine details; raise edge strength to remove weaker lines. Use Smooth mode if your phone gets warm or the preview begins to lag.</span></div>
 </div>
 </section>
