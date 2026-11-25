@@ -3,6 +3,9 @@
 const $=selector=>document.querySelector(selector);
 const video=$('#liveVideo'),status=$('#liveStatus'),start=$('#startCamera'),stop=$('#stopCamera'),capture=$('#captureFrame');
 const canvases={color:$('#liveColor'),gray:$('#liveGray'),output:$('#liveOutput')};
+const viewToggle=$('#liveViewToggle'),sourceLabel=$('#liveSourceLabel');
+let sourceView='color';
+function setSourceView(view){sourceView=view==='gray'?'gray':'color';const showGray=sourceView==='gray';canvases.color.hidden=showGray;canvases.gray.hidden=!showGray;sourceLabel.textContent=showGray?'Grayscale stream':'Colour stream';viewToggle.setAttribute('aria-label',showGray?'Switch camera preview to colour':'Switch camera preview to grayscale');viewToggle.title=showGray?'Switch to colour preview':'Switch to grayscale preview';viewToggle.dataset.view=sourceView;}
 const ctx={color:canvases.color.getContext('2d'),gray:canvases.gray.getContext('2d'),output:canvases.output.getContext('2d')};
 const worker=new Worker('./processor-worker.js');
 const workCanvas=document.createElement('canvas'),workCtx=workCanvas.getContext('2d',{willReadFrequently:true});
@@ -149,8 +152,9 @@ settingsIds.forEach(id=>$('#'+id).addEventListener('input',()=>{
  updateLabels();
 }));
 $('#liveReset').addEventListener('click',resetSettings);
+viewToggle.addEventListener('click',()=>setSourceView(sourceView==='color'?'gray':'color'));
 $('#cameraFacing').addEventListener('change',()=>{if(!stopped){stopCamera('Switching camera…');startCamera();}});
 start.addEventListener('click',startCamera);stop.addEventListener('click',()=>stopCamera());capture.addEventListener('click',captureFrame);
 window.addEventListener('pagehide',()=>{stopCamera();worker.terminate();});
-updateLabels();$('#liveDevice').textContent=deviceLabel;$('#liveFps').textContent='0 FPS processed';
+setSourceView('color');updateLabels();$('#liveDevice').textContent=deviceLabel;$('#liveFps').textContent='0 FPS processed';
 })();
