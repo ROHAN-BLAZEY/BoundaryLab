@@ -261,3 +261,28 @@ test('phone camera capture uses native image capture input and export uses a for
  assert.ok(app.includes("$('#cameraCapture').addEventListener('change'"));
  assert.ok(app.includes("exportAs($('#exportFormat')?.value || 'png')"));
 });
+
+
+test('Image Studio groups capture and gallery actions above controls and uses a click export menu',()=>{
+ const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ const hero=html.slice(html.indexOf('class="hero-actions"'),html.indexOf('</div>',html.indexOf('class="hero-actions"')));
+ for(const id of ['camera','saveToGallery','galleryButton'])assert.ok(hero.includes('id="'+id+'"'),id+' belongs beside Open image');
+ assert.doesNotMatch(html,/cameraCapture|Choose file|exportFormat|exportImage/);
+ assert.match(html,/<details class="export-menu">/);
+ for(const format of ['png','jpeg','webp','svg'])assert.ok(html.includes('data-export="'+format+'"'));
+ assert.match(app,/\$\$\('\.export-menu \\[data-export\\]'\)/);
+ assert.match(app,/function closePhotoCamera/);
+ assert.match(app,/getUserMedia\(/);
+ assert.match(app,/cameraTakePhoto/);
+});
+
+test('shared contour refinement bridges one-pixel breaks while preserving crisp long edges',()=>{
+ const width=24,height=24,edge=new Uint8Array(width*height);
+ for(let x=4;x<=18;x++)if(x!==11)edge[12*width+x]=255;
+ const linked=context.bridgeContourGaps(edge,width,height);
+ assert.equal(linked[12*width+11],255,'one-pixel break on a straight contour should be bridged');
+ assert.equal(linked[12*width+4],255);
+ assert.equal(linked[12*width+18],255);
+ assert.equal(edge[12*width+11],0,'input edge mask should not be mutated');
+});
