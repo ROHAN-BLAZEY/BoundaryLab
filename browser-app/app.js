@@ -34,10 +34,10 @@
   let galleryObjectUrls = [];
 
   const defaults = {
-    style: 'outline', edgeMethod: 'canny', low: 28, high: 78,
+    style: 'edge-map', edgeMethod: 'canny', low: 28, high: 78,
     cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 0,
-    rotation: 0, color: '#087967', invert: false, transparent: false,
-    autoNormalize: false, morphology: 'off', workspaceMode: 'standard', sketchVariant: 'pencil', stencilOffset: 0, blueprintGrid: true, gridSpacing: 32,
+    rotation: 0, color: '#ffffff', invert: false, transparent: false,
+    autoNormalize: true, morphology: 'off', workspaceMode: 'clean-outline', sketchVariant: 'pencil', stencilOffset: 0, blueprintGrid: false, gridSpacing: 32,
   };
   const settings = { ...defaults };
 
@@ -520,7 +520,7 @@
     'Detailed Outline': { workspaceMode: 'detailed-outline', style: 'edge-map', edgeMethod: 'canny', low: 18, high: 58, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 14, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'off' },
     'Bold Outline': { workspaceMode: 'bold-outline', style: 'edge-map', edgeMethod: 'canny', low: 23, high: 70, cleanup: 1, edgeThickness: 3, brightness: 0, contrast: 18, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
     'Sketch Style': { workspaceMode: 'sketch', style: 'sketch', edgeMethod: 'sobel', low: 34, high: 88, cleanup: 2, edgeThickness: 1, brightness: 8, contrast: 14, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'open' },
-    'Technical Drawing': { workspaceMode: 'technical-drawing', style: 'technical', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
+    'Technical Drawing': { workspaceMode: 'technical-drawing', style: 'edge-map', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
     'Stencil Style': { workspaceMode: 'stencil', style: 'edge-map', edgeMethod: 'canny', low: 30, high: 86, cleanup: 2, edgeThickness: 2, brightness: 5, contrast: 32, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close-open' },
   };
 
