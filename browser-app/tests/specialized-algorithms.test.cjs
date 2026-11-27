@@ -274,3 +274,28 @@ test('shared contour refinement bridges one-pixel breaks while preserving crisp 
  assert.equal(linked[12*width+18],255);
  assert.equal(edge[12*width+11],0,'input edge mask should not be mutated');
 });
+
+
+test('studio export actions bind to every format without aborting later startup handlers',()=>{
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
+ const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+ assert.match(app,/\$\$\('\.export-menu \[data-export\]'\)\.forEach/);
+ assert.doesNotMatch(app,/\$\('\.export-menu \[data-export\]'\)\.forEach/);
+ for(const format of ['png','jpeg','webp','svg'])assert.ok(html.includes('data-export="'+format+'"'));
+ assert.match(app,/function exportAs\(type\)/);
+ assert.match(app,/link\.download = name/);
+ assert.match(app,/document\.body\.append\(link\)/);
+ assert.match(css,/\.modal\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
+});
+
+test('camera handlers are registered after safe export handler setup and modal can be hidden',()=>{
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
+ const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+ assert.ok(app.indexOf("$$('.export-menu [data-export]')") < app.indexOf("$('#camera').addEventListener"));
+ assert.match(app,/navigator\.mediaDevices\?\.getUserMedia/);
+ assert.match(app,/cameraPreview\.srcObject = photoStream/);
+ assert.match(html,/<video id="cameraPreview" autoplay playsinline muted>/);
+ assert.match(css,/\.modal\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
+});
