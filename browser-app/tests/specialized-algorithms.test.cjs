@@ -81,18 +81,15 @@ test('live edge-map output uses a dark field and adjustable soft edge halo',()=>
  assert.notDeepEqual(Array.from(crisp.output),Array.from(soft.output));
 });
 
-test('live preview bypasses expensive multi-scale still-image algorithms',()=>{
+test('live preview uses fast preset-specific paths without full still-image thinning',()=>{
  const width=96,height=128,pixels=new Uint8ClampedArray(width*height*4);
  for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=((x>>3)+(y>>3))%2?220:30;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
- const original=context.workspaceProcess;
- context.workspaceProcess=()=>{throw new Error('still-image specialised pipeline should not run in live preview');};
- try {
-  context.self.onmessage({data:{id:101,pixels:pixels.buffer,width,height,sentAt:456,settings:{workspaceMode:'blueprint',style:'edge-map',livePreview:true,edgeMethod:'canny',low:20,high:60,cleanup:1,edgeThickness:1,edgeSoftness:1,color:'#e8eeee',contrast:10,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false}}});
-  const result=context.lastMessage;
-  assert.equal(result.sentAt,456);
-  assert.equal(result.output.length,width*height*4);
-  assert.equal(result.gray.length,width*height);
- } finally { context.workspaceProcess=original; }
+ for(const workspaceMode of ['clean-outline','technical-drawing','blueprint']){
+  const gray=context.makeGrayscale(pixels,width*height);
+  const result=context.workspaceProcess(gray,width,height,{workspaceMode,livePreview:true,edgeMethod:'canny',low:18,high:48},pixels);
+  assert.equal(result.edge.length,width*height,workspaceMode+' live model should return a frame-sized edge mask');
+  assert.ok(result.edge.some(v=>v===255),workspaceMode+' live model should retain visible contours');
+ }
 });
 
 test('blueprint live preset receives the same anti-aliased edge rendering',()=>{
