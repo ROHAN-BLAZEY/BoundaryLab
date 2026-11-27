@@ -393,7 +393,8 @@ self.onmessage = ({ data: job }) => {
     // multi-scale workspace algorithms remain available to still-image work.
     const liveHigh = Math.max(1, Number(adjustedSettings.high) || 78);
     const link = Math.max(0, Math.min(100, Number(settings.edgeLinking) || 65));
-    const linkedLow = Math.min(Number(adjustedSettings.low) || 28, Math.max(1, Math.round(liveHigh * (0.12 + (100 - link) * 0.004))));
+    const requestedLow = Math.max(1, Math.min(liveHigh - 1, Number(adjustedSettings.low) || 28));
+    const linkedLow = Math.max(1, Math.min(liveHigh - 1, Math.round(requestedLow * (1 - link * 0.0035))));
     detected = detectEdges(smoothed, width, height, { ...adjustedSettings, low: linkedLow, edgeMethod: settings.edgeMethod || 'canny' });
     detected = liveContourCleanup(detected, width, height, settings.gapClosing, settings.minContourLength);
     detected = stabilizeLiveEdges(detected, previousBuffer ? new Uint8Array(previousBuffer) : null, width, height, settings.temporalStability);
