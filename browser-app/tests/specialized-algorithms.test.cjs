@@ -281,7 +281,7 @@ test('studio export actions bind to every format without aborting later startup 
  const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
  const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
  assert.match(app,/\$\$\('\.export-menu \[data-export\]'\)\.forEach/);
- assert.doesNotMatch(app,/\$\('\.export-menu \[data-export\]'\)\.forEach/);
+ assert.doesNotMatch(app,/^\s*\$\('\.export-menu \[data-export\]'\)\.forEach/m);
  for(const format of ['png','jpeg','webp','svg'])assert.ok(html.includes('data-export="'+format+'"'));
  assert.match(app,/function exportAs\(type\)/);
  assert.match(app,/link\.download = name/);
