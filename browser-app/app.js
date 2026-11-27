@@ -721,31 +721,6 @@
     }
   }
 
-  function exportProjectSettings() {
-    const project = { format: 'boundarylab-browser-settings', version: 1, createdAt: new Date().toISOString(), settings: { ...settings } };
-    download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), `${filename || 'boundarylab'}-settings.json`);
-  }
-
-  function importProjectSettings(file) {
-    if (!file) return;
-    if (file.size > 128 * 1024) return toast('Settings file is too large');
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const project = JSON.parse(String(reader.result));
-        if (!project || project.format !== 'boundarylab-browser-settings' || !project.settings) throw new Error('invalid');
-        Object.assign(settings, { ...defaults, ...project.settings });
-        sync();
-        saveHistory();
-        render();
-        toast('Settings imported');
-      } catch {
-        toast('Choose a valid BoundaryLab settings file');
-      }
-    };
-    reader.readAsText(file);
-  }
-
   function setTheme(theme) {
     const isLight = theme === 'light';
     document.body.dataset.theme = isLight ? 'light' : 'dark';
@@ -801,11 +776,6 @@
     event.target.value = '';
   });
   $('#savePreset')?.addEventListener('click', savePreset);
-  $('#exportProject')?.addEventListener('click', exportProjectSettings);
-  $('#importProject')?.addEventListener('change', (event) => {
-    importProjectSettings(event.target.files[0]);
-    event.target.value = '';
-  });
   $$('.quick-presets [data-quick-preset]').forEach((button) => button.addEventListener('click', () => applyPreset(`Built in:${button.dataset.quickPreset}`)));
   $('#simpleDetail').addEventListener('input', (event) => { settings.high = Math.max(1, Math.min(255, Math.round(128 - Number(event.target.value) * .9))); sync(); saveHistory(); schedule(); });
   $('#simpleSmoothness').addEventListener('input', (event) => { settings.cleanup = Math.round(Number(event.target.value) / 25); saveHistory(); schedule(); });
@@ -828,10 +798,7 @@
     updateHistoryButtons();
     render();
   });
-  $$('[data-export]').forEach((button) => button.addEventListener('click', () => {
-    exportAs(button.dataset.export);
-    $('.export-menu').open = false;
-  }));
+  $('#exportImage')?.addEventListener('click', () => exportAs($('#exportFormat')?.value || 'png'));
 
   $('#modalClose').addEventListener('click', () => closeModal($('#modal')));
   $('#galleryClose').addEventListener('click', () => closeModal($('#galleryModal')));
@@ -889,26 +856,11 @@
     });
   });
 
-  $('#camera').addEventListener('click', async () => {
-    if (!navigator.mediaDevices?.getUserMedia || !isSecureContext) return toast('Camera needs a secure HTTPS page');
-    let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      await video.play();
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      canvas.toBlob((blob) => {
-        if (blob) loadFile(new File([blob], 'camera-capture.png', { type: 'image/png' }));
-      });
-    } catch (error) {
-      toast(error.name === 'NotAllowedError' ? 'Allow camera permission in browser settings' : 'Camera could not start');
-    } finally {
-      stream?.getTracks().forEach((track) => track.stop());
-    }
+  $('#camera').addEventListener('click', () => $('#cameraCapture').click());
+  $('#cameraCapture').addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (file) loadFile(file);
+    event.target.value = '';
   });
 
   $('#themeToggle').addEventListener('click', () => {
