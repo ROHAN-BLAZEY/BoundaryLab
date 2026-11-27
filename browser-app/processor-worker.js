@@ -190,7 +190,7 @@ function stabilizeLiveEdges(edge, previous, width, height, strength) {
 
 function detectEdges(gray, width, height, settings) {
   const high = Math.max(1, Math.min(255, Number(settings.high) || 78));
-  const low = settings.autoLinkThresholds !== false
+  const low = settings.autoLinkThresholds === true
     ? Math.max(1, Math.round(high * 0.4))
     : Math.max(0, Math.min(high, Number(settings.low)));
   const edge = new Uint8Array(width * height);
@@ -200,7 +200,7 @@ function detectEdges(gray, width, height, settings) {
       for (let x = 1; x < width - 1; x++) {
         const i = y * width + x;
         const response = Math.abs(4 * gray[i] - gray[i - 1] - gray[i + 1] - gray[i - width] - gray[i + width]) / 4;
-        if (response > 0 && response >= low) edge[i] = 255;
+        if (response > 0 && response >= high) edge[i] = 255;
       }
     }
     return edge;
@@ -385,7 +385,7 @@ self.onmessage = ({ data: job }) => {
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
   const offset = Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
   const adjustedHigh = Math.max(1, Math.min(255, Number(settings.high) + offset));
-  const adjustedSettings = { ...settings, high: adjustedHigh, low: settings.autoLinkThresholds !== false ? Math.max(1, Math.round(adjustedHigh * 0.4)) : Math.max(0, Math.min(255, Number(settings.low) + offset)) };
+  const adjustedSettings = { ...settings, high: adjustedHigh, low: settings.autoLinkThresholds === true ? Math.max(1, Math.round(adjustedHigh * 0.4)) : Math.max(0, Math.min(255, Number(settings.low) + offset)) };
   let specialized = { edge: null, tone: adjusted };
   let detected;
   let modeStyle;
