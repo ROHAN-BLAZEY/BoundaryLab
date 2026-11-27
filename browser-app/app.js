@@ -34,7 +34,7 @@
   let galleryObjectUrls = [];
 
   const defaults = {
-    style: 'edge-map', edgeMethod: 'canny', low: 28, high: 78,
+    style: 'edge-map', edgeMethod: 'canny', low: 31, high: 78, autoLinkThresholds: true,
     cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 0,
     rotation: 0, color: '#ffffff', invert: false, transparent: false,
     autoNormalize: true, morphology: 'off', workspaceMode: 'clean-outline', sketchVariant: 'pencil', stencilOffset: 0, blueprintGrid: false, gridSpacing: 32,
@@ -54,6 +54,7 @@
   }
 
   function sync() {
+    if (settings.autoLinkThresholds !== false) settings.low = Math.max(1, Math.round(settings.high * 0.4));
     const controls = {
       style: settings.style,
       edgeMethod: settings.edgeMethod,
@@ -80,12 +81,13 @@
       else element.value = value;
     }
     $('#tval').textContent = settings.low;
+    $('#threshold').disabled = settings.autoLinkThresholds !== false;
     $('#highVal').textContent = settings.high;
     $('#nval').textContent = settings.cleanup;
     $('#thicknessVal').textContent = settings.edgeThickness;
     $('#brightnessVal').textContent = settings.brightness;
     $('#contrastVal').textContent = settings.contrast;
-    $('#simpleDetail').value = Math.round(Math.max(0, Math.min(100, (80 - settings.low) / .55)));
+    $('#simpleDetail').value = Math.round(Math.max(0, Math.min(100, (128 - settings.high) / .9)));
     $('#simpleSmoothness').value = settings.cleanup * 25;
     $('#simpleThickness').value = settings.edgeThickness;
     $('#simpleContrast').value = settings.contrast;
@@ -640,6 +642,17 @@
     });
   });
 
+  function updateEdgeMethodHelp() {
+    const descriptions = {
+      canny: 'Keeps strong boundaries and joins nearby weaker edge sections for cleaner, more continuous outlines.',
+      sobel: 'Finds strong changes in brightness. Useful for simple, bold shapes, but can produce thicker edges.',
+      laplacian: 'Highlights rapid intensity changes, including small details and texture. It can also pick up more noise.',
+    };
+    const help = $('#edgeMethodHelp');
+    if (help) help.textContent = descriptions[settings.edgeMethod] || descriptions.canny;
+  }
+  updateEdgeMethodHelp();
+
   $('#defaults').addEventListener('click', resetAll);
   $('#reset').addEventListener('click', clearImage);
   $('#saveToGallery').addEventListener('click', saveCurrentToGallery);
@@ -655,7 +668,7 @@
     event.target.value = '';
   });
   $$('.quick-presets [data-quick-preset]').forEach((button) => button.addEventListener('click', () => applyPreset(`Built in:${button.dataset.quickPreset}`)));
-  $('#simpleDetail').addEventListener('input', (event) => { settings.low = Math.round(80 - Number(event.target.value) * .55); settings.high = Math.min(255, settings.low + 50); saveHistory(); schedule(); });
+  $('#simpleDetail').addEventListener('input', (event) => { settings.high = Math.max(1, Math.min(255, Math.round(128 - Number(event.target.value) * .9))); settings.low = Math.max(1, Math.round(settings.high * 0.4)); sync(); saveHistory(); schedule(); });
   $('#simpleSmoothness').addEventListener('input', (event) => { settings.cleanup = Math.round(Number(event.target.value) / 25); saveHistory(); schedule(); });
   $('#simpleThickness').addEventListener('input', (event) => { settings.edgeThickness = Number(event.target.value); saveHistory(); schedule(); });
   $('#simpleContrast').addEventListener('input', (event) => { settings.contrast = Number(event.target.value); saveHistory(); schedule(); });
