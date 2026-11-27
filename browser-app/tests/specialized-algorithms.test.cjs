@@ -219,3 +219,24 @@ test('mobile control tabs initialize as a collection and hero copy is removed',(
  assert.match(app,/\$\('#file'\)\.addEventListener\('change'/);
  assert.doesNotMatch(html,/IMAGE PROCESSING WORKSPACE|Make boundaries|Compare your original, grayscale, and processed image side by side/);
 });
+
+
+test('Image Studio initializes all frame controls before attaching image upload',()=>{
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.equal((app.match(/\$\$\('\[data-frame-index\]'\)\.forEach/g)||[]).length,2);
+ assert.doesNotMatch(app,/\$\('\[data-frame-index\]'\)\.forEach/);
+ assert.match(app,/async function loadFile/);
+ assert.match(app,/supportedExtension/);
+ assert.match(app,/readAsDataURL/);
+ assert.match(app,/\$\('#file'\)\.addEventListener\('change'/);
+});
+test('Live Studio removes obsolete notes and auto-tunes preset thresholds from camera frames',()=>{
+ const html=fs.readFileSync(path.join(root,'live.html'),'utf8');
+ const live=fs.readFileSync(path.join(root,'live-studio.js'),'utf8');
+ const worker=fs.readFileSync(path.join(root,'processor-worker.js'),'utf8');
+ assert.doesNotMatch(html,/AR note|<strong>Tip<\/strong>/);
+ assert.match(live,/function tunePresetFromFrame/);
+ assert.match(live,/autoTunePending/);
+ assert.match(live,/percentiles:\[0\.20,0\.64\]/);
+ assert.match(worker,/requestedLow/);
+});
