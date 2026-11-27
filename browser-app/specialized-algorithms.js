@@ -100,7 +100,105 @@ function makeSketchTone(gray,width,height,variant='pencil'){
   for(let i=0;i<tone.length;i++){const dodge=Math.min(255,Math.round(gray[i]*255/Math.max(1,255-blur[i])));let value=variant==='charcoal'?Math.round(dodge*.68+gray[i]*.32):dodge;const x=i%width,y=(i-x)/width;if(variant==='crosshatch'&&((x+y)%11<2||(x-y+width)%13<2)&&gray[i]<205)value=Math.min(value,55);tone[i]=value;}
   return tone;
 }
-function workspaceProcess(gray,width,height,settings){
+
+function borderMean(gray,width,height){
+  let sum=0,count=0;const step=Math.max(1,Math.floor(Math.min(width,height)/160));
+  for(let x=0;x<width;x+=step){sum+=gray[x];sum+=gray[(height-1)*width+x];count+=2;}
+  for(let y=step;y<height-step;y+=step){sum+=gray[y*width];sum+=gray[y*width+width-1];count+=2;}
+  return sum/Math.max(1,count);
+}
+function adaptiveInkMask(gray,width,height){
+  const stride=width+1,integral=new Float64Array(stride*(height+1));
+  for(let y=1;y<=height;y++){let row=0;for(let x=1;x<=width;x++){row+=gray[(y-1)*width+x-1];integral[y*stride+x]=integral[(y-1)*stride+x]+row;}}
+  const radius=Math.max(3,Math.min(18,Math.round(Math.min(width,height)*.025)));
+  const mask=new Uint8Array(gray.length),lightBackground=borderMean(gray,width,height)>150;
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const x1=Math.max(0,x-radius),x2=Math.min(width-1,x+radius),y1=Math.max(0,y-radius),y2=Math.min(height-1,y+radius);
+    const area=(x2-x1+1)*(y2-y1+1);
+    const sum=integral[(y2+1)*stride+x2+1]-integral[y1*stride+x2+1]-integral[(y2+1)*stride+x1]+integral[y1*stride+x1];
+    const mean=sum/area,value=gray[y*width+x];
+    if(lightBackground ? value<mean-7 : value>mean+7) mask[y*width+x]=1;
+  }
+  return {mask,lightBackground};
+}
+function thinBinaryMask(source,width,height){
+  let image=source.slice(),changed=true,iterations=0;
+  while(changed&&iterations++<24){
+    changed=false;
+    for(let phase=0;phase<2;phase++){
+      const remove=[];
+      for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){
+        const i=y*width+x;if(!image[i])continue;
+        const p=[image[i-width],image[i-width+1],image[i+1],image[i+width+1],image[i+width],image[i+width-1],image[i-1],image[i-width-1]];
+        const n=p.reduce((a,b)=>a+b,0);if(n<2||n>6)continue;
+        let transitions=0;for(let k=0;k<8;k++)if(!p[k]&&p[(k+1)%8])transitions++;
+        if(transitions!==1)continue;
+        const c1=phase===0?p[0]*p[2]*p[4]:p[0]*p[2]*p[6];
+        const c2=phase===0?p[2]*p[4]*p[6]:p[0]*p[4]*p[6];
+        if(!c1&&!c2)remove.push(i);
+      }
+      if(remove.length){changed=true;for(const i of remove)image[i]=0;}
+    }
+  }
+  const out=new Uint8Array(image.length);for(let i=0;i<image.length;i++)out[i]=image[i]?255:0;return out;
+}
+function removeTinyMaskComponents(mask,width,height,minArea=3){
+  const output=mask.slice(),seen=new Uint8Array(mask.length),queue=new Int32Array(mask.length);
+  for(let start=0;start<mask.length;start++){
+    if(!mask[start]||seen[start])continue;let head=0,tail=0;queue[tail++]=start;seen[start]=1;
+    while(head<tail){const i=queue[head++],x=i%width,y=(i-x)/width;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||nx>=width||ny<0||ny>=height)continue;const j=ny*width+nx;if(mask[j]&&!seen[j]){seen[j]=1;queue[tail++]=j;}}
+    }
+    if(tail<minArea)for(let k=0;k<tail;k++)output[queue[k]]=0;
+  }
+  return output;
+}
+function extractBlueprintInk(pixels,gray,width,height){
+  if(!pixels||pixels.length<width*height*4)return null;
+  let r=0,g=0,b=0,count=0;const step=Math.max(1,Math.floor(Math.min(width,height)/120));
+  const sample=(x,y)=>{const i=(y*width+x)*4;r+=pixels[i];g+=pixels[i+1];b+=pixels[i+2];count++;};
+  for(let x=0;x<width;x+=step){sample(x,0);sample(x,height-1);}
+  for(let y=step;y<height-step;y+=step){sample(0,y);sample(width-1,y);}
+  r/=count;g/=count;b/=count;
+  const bluePaper=b>r*1.18&&b>g*1.04&&(0.299*r+0.587*g+0.114*b)<165;
+  if(!bluePaper)return null;
+  const base=borderMean(gray,width,height),mask=new Uint8Array(gray.length);
+  for(let i=0;i<mask.length;i++)if(gray[i]>Math.max(105,base+28))mask[i]=255;
+  return removeTinyMaskComponents(mask,width,height,2);
+}
+
+function workspaceProcess(gray,width,height,settings,pixels){
+  const mode=settings.workspaceMode||'standard';let edge=null,tone=gray;
+  if(mode==='clean-outline'){
+    const ink=adaptiveInkMask(gray,width,height);
+    edge=ink.lightBackground?thinBinaryMask(removeTinyMaskComponents(ink.mask,width,height,3),width,height)
+      :detectEdges(edgeAwareSmooth(gray,width,height),width,height,{...settings,edgeMethod:settings.edgeMethod||'canny'});
+  }else if(mode==='detailed-outline'){
+    edge=multiScaleEdges(gray,width,height,settings);
+  }else if(mode==='bold-outline'){
+    edge=detectEdges(smooth(gray,width,height,1),width,height,{...settings,edgeMethod:settings.edgeMethod||'canny'});
+  }else if(mode==='sketch'){
+    tone=makeSketchTone(gray,width,height,settings.sketchVariant||'pencil');
+    edge=detectEdges(gray,width,height,{...settings,edgeMethod:settings.edgeMethod||'sobel'});
+  }else if(mode==='technical-drawing'){
+    const ink=adaptiveInkMask(gray,width,height);
+    edge=ink.lightBackground
+      ?thinBinaryMask(removeTinyMaskComponents(ink.mask,width,height,2),width,height)
+      :multiScaleEdges(gray,width,height,settings);
+  }else if(mode==='blueprint'){
+    const sourceInk=extractBlueprintInk(pixels,gray,width,height);
+    edge=sourceInk||multiScaleEdges(gray,width,height,settings);
+  }else if(mode==='stencil'){
+    tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);
+    edge=new Uint8Array(tone.length);
+    for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){
+      const i=y*width+x,v=tone[i];
+      if(v!==tone[i-1]||v!==tone[i+1]||v!==tone[i-width]||v!==tone[i+width])edge[i]=255;
+    }
+  }
+  return {edge,tone};
+}
+
   const mode=settings.workspaceMode||'standard';let edge=null,tone=gray;
   // Each workspace owns its detector/tone generation. Shared cleanup,
   // morphology and thickness are applied once by processor-worker.js.
