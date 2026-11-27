@@ -26,7 +26,7 @@
     if (!frameGrid) return;
     const index = Math.max(0, Math.min(2, Math.round(frameGrid.scrollLeft / Math.max(1, frameGrid.clientWidth))));
     $('#frameViewName').textContent = frameViewNames[index];
-    $('[data-frame-index]').forEach((button) => {
+    $$('[data-frame-index]').forEach((button) => {
       if (Number(button.dataset.frameIndex) === index) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
@@ -46,7 +46,7 @@
       updateFrameIndicator();
     });
   }, { passive: true });
-  $('[data-frame-index]').forEach((button) => {
+  $$('[data-frame-index]').forEach((button) => {
     button.addEventListener('click', () => showFrame(Number(button.dataset.frameIndex)));
   });
   window.addEventListener('resize', updateFrameIndicator, { passive: true });
