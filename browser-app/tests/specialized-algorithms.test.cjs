@@ -337,3 +337,22 @@ test('technical drawing keeps the outer silhouette of filled CAD geometry',()=>{
  assert.equal(result.edge[20*width+12],255,'side silhouette boundary should remain');
  assert.equal(result.edge[20*width+20],0,'filled interior should not become a skeleton artefact');
 });
+
+test('directional contour repair closes short aligned gaps without joining crossing edges',()=>{
+ const width=40,height=32,edge=new Uint8Array(width*height);
+ for(let x=5;x<=16;x++)if(x!==11&&x!==12)edge[12*width+x]=255;
+ for(let x=24;x<=34;x++)edge[12*width+x]=255;
+ const linked=context.bridgeContourGapsDirectional(edge,width,height,2);
+ assert.equal(linked[12*width+11],255,'first missing contour pixel should be restored');
+ assert.equal(linked[12*width+12],255,'second missing contour pixel should be restored');
+ assert.equal(edge[12*width+11],0,'input edge mask remains unchanged');
+});
+test('noise cleanup removes isolated specks while preserving long connected contours',()=>{
+ const width=48,height=40,edge=new Uint8Array(width*height);
+ edge[4*width+4]=255;edge[5*width+5]=255;
+ for(let x=8;x<39;x++)edge[22*width+x]=255;
+ const cleaned=context.removeShortContours(context.cleanSpecks(edge,width,height,2),width,height,5);
+ assert.equal(cleaned[4*width+4],0);
+ assert.equal(cleaned[5*width+5],0);
+ for(let x=8;x<39;x++)assert.equal(cleaned[22*width+x],255);
+});
