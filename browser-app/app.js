@@ -2,6 +2,22 @@
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+  const controlsPanel = $('.controls-panel');
+  const controlTabs = $('[data-control-tab]');
+  function setControlMode(mode) {
+    if (!controlsPanel) return;
+    controlsPanel.dataset.controlMode = mode;
+    controlTabs.forEach((tab) => {
+      const selected = tab.dataset.controlTab === mode;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    const advanced = $('.advanced-controls');
+    if (advanced) advanced.open = mode !== 'simple';
+  }
+  controlTabs.forEach((tab) => tab.addEventListener('click', () => setControlMode(tab.dataset.controlTab)));
+  setControlMode('simple');
+
   const frameGrid = $('#frameGrid');
   const frameViewNames = ['Colour image', 'Grayscale image', 'Processed image'];
   let frameScrollRaf = 0;
@@ -302,58 +318,65 @@
     settings.edgeMethod = mode === 'technical-drawing' || mode === 'sketch' ? 'sobel' : 'canny';
   }
 
-  function loadFile(file, presetSettings = null) {
+  async function loadFile(file, presetSettings = null) {
     if (!file) return;
     if (file.size > 30 * 1024 * 1024) return toast('Image exceeds the 30 MB limit');
     if (!file.type.startsWith('image/')) return toast('Choose an image file');
-
+    if (file.size === 0) return toast('This image file is empty or could not be read');
     $('#file').value = '';
     const token = ++fileLoadToken;
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      if (token !== fileLoadToken) return;
-      const scale = Math.min(1, MAX_SIDE / image.width, MAX_SIDE / image.height);
-      baseW = Math.max(1, Math.round(image.width * scale));
-      baseH = Math.max(1, Math.round(image.height * scale));
+    let bitmap = null, image = null;
+    try {
+      if ('createImageBitmap' in window) {
+        try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { bitmap = null; }
+      }
+      if (!bitmap) {
+        const url = URL.createObjectURL(file);
+        try {
+          image = await new Promise((resolve, reject) => {
+            const candidate = new Image();
+            candidate.onload = () => resolve(candidate);
+            candidate.onerror = () => reject(new Error('decode'));
+            candidate.src = url;
+          });
+        } finally { URL.revokeObjectURL(url); }
+      }
+      if (token !== fileLoadToken) { bitmap?.close?.(); return; }
+      const imageWidth = bitmap?.width || image?.naturalWidth || 0;
+      const imageHeight = bitmap?.height || image?.naturalHeight || 0;
+      if (!imageWidth || !imageHeight) throw new Error('decode');
+      const scale = Math.min(1, MAX_SIDE / imageWidth, MAX_SIDE / imageHeight);
+      baseW = Math.max(1, Math.round(imageWidth * scale));
+      baseH = Math.max(1, Math.round(imageHeight * scale));
       setCanvasSize(source, baseW, baseH);
-      sourceCtx.drawImage(image, 0, 0, baseW, baseH);
+      sourceCtx.clearRect(0, 0, baseW, baseH);
+      sourceCtx.drawImage(bitmap || image, 0, 0, baseW, baseH);
+      bitmap?.close?.(); bitmap = null;
       basePixels = sourceCtx.getImageData(0, 0, baseW, baseH).data;
       filename = file.name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '-') || 'boundarylab';
       currentAsset = file;
       if (presetSettings) Object.assign(settings, { ...defaults, ...presetSettings });
       autoTuneForImage(settings.workspaceMode);
-
-      sequence++;
-      lastOutput = null;
-      lastEdge = null;
-      setCanvasSize(grayCanvas, 1, 1);
-      setCanvasSize(result, 1, 1);
+      sequence++; lastOutput = null; lastEdge = null;
+      setCanvasSize(grayCanvas, 1, 1); setCanvasSize(result, 1, 1);
       $('#fileName').textContent = file.name;
       $('#sourcePlaceholder').hidden = true;
       $('#grayPlaceholder').querySelector('b').textContent = 'Preparing grayscale…';
       $('#grayPlaceholder').querySelector('small').textContent = 'Updating from source image';
       $('#resultPlaceholder').querySelector('b').textContent = 'Processing image…';
       $('#resultPlaceholder').querySelector('small').textContent = 'Applying your selected controls';
-      $('#grayPlaceholder').hidden = false;
-      $('#resultPlaceholder').hidden = false;
-      $('#reset').disabled = false;
-      $('#saveToGallery').disabled = true;
-      history = [];
-      historyIndex = -1;
-      sync();
-      saveHistory();
-      render();
+      $('#grayPlaceholder').hidden = false; $('#resultPlaceholder').hidden = false;
+      $('#reset').disabled = false; $('#saveToGallery').disabled = true;
+      history = []; historyIndex = -1;
+      sync(); saveHistory(); render();
       requestAnimationFrame(() => showFrame(2, false));
       toast('Image opened locally');
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
+    } catch (error) {
+      bitmap?.close?.();
       if (token !== fileLoadToken) return;
-      toast('Could not decode this image');
-    };
-    image.src = url;
+      console.error('Image load failed:', error);
+      toast('Could not open this image. Try JPG, PNG or WebP.');
+    }
   }
 
   function openModal(modal, focusSelector) {
