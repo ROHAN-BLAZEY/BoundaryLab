@@ -695,6 +695,8 @@
     if (Object.keys(local).length) addGroup('Saved on this device', local);
   }
 
+  refreshPresetMenu();
+
   function applyPreset(reference) {
     if (!reference) return;
     const [group, ...parts] = reference.split(':');
@@ -871,22 +873,43 @@
     cameraModal.hidden = true;
   }
   $('#camera').addEventListener('click', async () => {
-    if (!navigator.mediaDevices?.getUserMedia || !isSecureContext) {
-      toast('Camera access requires HTTPS and a supported browser');
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
+      toast('Camera access needs HTTPS and a supported browser. Open this page in Chrome and allow camera access.');
       return;
     }
+    closePhotoCamera();
+    cameraModal.hidden = false;
+    $('#cameraTakePhoto').disabled = true;
+    toast('Opening camera…');
     try {
-      photoStream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      });
+      // Start with broadly supported mobile constraints; retry with browser defaults
+      // if a device rejects the preferred rear-camera resolution or facing mode.
+      try {
+        photoStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch (preferredError) {
+        photoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+      }
       cameraPreview.srcObject = photoStream;
-      cameraModal.hidden = false;
+      await new Promise((resolve, reject) => {
+        if (cameraPreview.readyState >= 1 && cameraPreview.videoWidth) return resolve();
+        const timer = window.setTimeout(() => reject(new Error('Camera preview timed out')), 10000);
+        cameraPreview.addEventListener('loadedmetadata', () => { window.clearTimeout(timer); resolve(); }, { once: true });
+      });
       await cameraPreview.play();
-      $('#cameraTakePhoto').disabled = !cameraPreview.videoWidth;
+      $('#cameraTakePhoto').disabled = !(cameraPreview.videoWidth && cameraPreview.videoHeight);
     } catch (error) {
       closePhotoCamera();
-      toast(error.name === 'NotAllowedError' ? 'Allow camera permission in browser settings' : 'Camera could not start');
+      const message = error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError'
+        ? 'Camera permission was denied. Allow camera access for this site in Chrome settings.'
+        : error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError'
+          ? 'No camera was found on this device.'
+          : error.name === 'NotReadableError' || error.name === 'TrackStartError'
+            ? 'The camera is busy. Close other camera apps and try again.'
+            : 'Camera could not start. Check site permissions and try again.';
+      toast(message);
     }
   });
   $('#cameraTakePhoto').addEventListener('click', () => {
@@ -911,6 +934,7 @@
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      if (!cameraModal.hidden) closePhotoCamera();
       if (!$('#galleryModal').hidden) closeModal($('#galleryModal'));
       if (!$('#guideModal').hidden) closeModal($('#guideModal'));
       if (!$('#modal').hidden) closeModal($('#modal'));
