@@ -41,7 +41,7 @@ function otsu(gray){
 }
 function makeStencilMask(gray,width,height,offset=0){
   // Hybrid global/local thresholding keeps useful object structure in uneven lighting.
-  const globalThreshold=Math.max(1,Math.min(254,otsu(gray)+Number(offset||0)));
+  const globalThreshold=Math.max(1,Math.min(254,otsu(gray)+Number(offset||0)+8));
   const integral=new Float64Array((width+1)*(height+1));
   for(let y=1;y<=height;y++){
     let rowSum=0;
@@ -68,7 +68,7 @@ function makeStencilMask(gray,width,height,offset=0){
     const localMean=localSum/area;
     const threshold=Math.max(1,Math.min(254,globalThreshold*.58+localMean*.42));
     const value=gray[y*width+x];
-    if(darkForeground?value<threshold:value>=threshold)mask[y*width+x]=255;
+    if(darkForeground?value<threshold:value>threshold)mask[y*width+x]=255;
   }
   // If local contrast creates an implausibly empty/full mask, fall back to a
   // global threshold with polarity inferred from the image border, not pixel count.
