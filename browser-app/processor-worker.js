@@ -496,8 +496,9 @@ self.onmessage = ({ data: job }) => {
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
   const morphed = settings.livePreview ? detected : refineEdges(detected, width, height, settings.morphology || 'off', 0);
-  const linked = bridgeContourGaps(morphed, width, height);
-  let refined = settings.livePreview || Number(settings.cleanup) < 1 ? linked : cleanSpecks(linked, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
+  const linked = bridgeContourGapsDirectional(bridgeContourGaps(morphed, width, height), width, height, settings.livePreview ? 2 : 3);
+  const targetMode = ['clean-outline','technical-drawing','blueprint'].includes(settings.workspaceMode);
+  let refined = (settings.livePreview || targetMode || Number(settings.cleanup) >= 1) ? cleanSpecks(linked, width, height, settings.livePreview ? 2 : 3) : linked;
   if (settings.livePreview) {
     const liveMinimum = Math.max(Number(settings.minContourLength)||1, Math.round(Math.min(width,height)*0.006));\n    refined = removeShortContours(refined, width, height, liveMinimum);
   } else {
