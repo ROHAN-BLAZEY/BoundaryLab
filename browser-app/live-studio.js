@@ -152,7 +152,7 @@ function tunePresetFromFrame(image){
   const magnitude=Math.min(255,Math.round(Math.hypot(gx,gy)/(4*Math.SQRT2)));
   if(magnitude>0){histogram[magnitude]++;count++;}
  }
- if(count<24)return;
+ if(count<24){autoTunePending=false;updateLabels();return;}
  const percentile=fraction=>{
   const target=Math.max(1,Math.ceil(count*fraction));let sum=0;
   for(let value=1;value<256;value++){sum+=histogram[value];if(sum>=target)return value;}
