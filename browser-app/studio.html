@@ -64,9 +64,16 @@
     <section class="frames-section" aria-labelledby="framesTitle">
       <div class="section-title frames-title">
         <div><span class="eyebrow">YOUR IMAGE AT A GLANCE</span><h2 id="framesTitle">Frames</h2></div>
-        <p>Color, grayscale, and the result update together as you work.</p>
+        <div class="frame-swipe-indicator" aria-label="Image views">
+          <span id="frameViewName">Processed image</span>
+          <div class="frame-view-dots" role="group" aria-label="Choose image view">
+            <button type="button" data-frame-index="0" aria-label="Show colour image" title="Colour image"></button>
+            <button type="button" data-frame-index="1" aria-label="Show grayscale image" title="Grayscale image"></button>
+            <button type="button" data-frame-index="2" aria-label="Show processed image" title="Processed image" aria-current="true"></button>
+          </div>
+        </div>
       </div>
-      <div class="frame-grid">
+      <div class="frame-grid" id="frameGrid" role="group" aria-label="Swipe horizontally between colour, grayscale and processed image views" tabindex="0">
         <article class="frame-panel">
           <div class="panel-heading"><div><span class="eyebrow">01 · ORIGINAL</span><h3>Color image</h3></div><button class="icon-button zoom" type="button" data-zoom="source" aria-label="Enlarge color image" title="Enlarge image">⤢</button></div>
           <div class="canvas-wrap source-surface">
