@@ -100,6 +100,7 @@
 
     <section class="controls-panel" aria-labelledby="controlsTitle">
       <div class="section-title controls-title"><div><span class="eyebrow">TUNE YOUR RESULT</span><h2 id="controlsTitle">Processing controls</h2></div><button id="defaults" class="text-button" type="button">Restore defaults</button></div>
+      <div class="mobile-control-tabs" role="tablist" aria-label="Processing control level"><button type="button" role="tab" data-control-tab="simple" aria-selected="true">Simple</button><button type="button" role="tab" data-control-tab="medium" aria-selected="false">Medium</button><button type="button" role="tab" data-control-tab="advanced" aria-selected="false">Advanced</button></div>
       <section class="quick-studio" aria-label="Quick Studio controls">
         <div><p class="eyebrow">QUICK STUDIO</p><h3>Start with a proven processing style</h3><p>Use a preset, then make simple visual adjustments. Every option changes the real processing settings.</p></div>
         <div class="quick-presets" role="group" aria-label="Quick presets">
@@ -114,24 +115,24 @@
       </section>
       <details class="advanced-controls"><summary>Advanced image processing <span>Thresholds, methods, cleanup, colour and export-ready controls</span></summary>
       <div class="control-grid">
-        <label class="control-label">Output style<select id="style"><option value="outline">Color outline</option><option value="edge-map">Dark edge map</option><option value="overlay">Photo + edges</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label>
-        <label class="control-label">Edge method<select id="edgeMethod"><option value="canny">Connected, clean outlines (recommended)</option><option value="sobel">Strong shape boundaries</option><option value="laplacian">Fine detail and texture</option></select><small class="control-help" id="edgeMethodHelp">Keeps strong boundaries and joins nearby weaker edge sections for cleaner, more continuous outlines.</small></label>
-        <label class="range-label">Low threshold <output id="tval">31</output><input id="threshold" type="range" min="0" max="255" value="31"></label>
-        <label class="range-label">High threshold <output id="highVal">78</output><input id="highThreshold" type="range" min="1" max="255" value="78"></label>
-        <label class="range-label">Noise smoothing <output id="nval">1</output><input id="cleanup" type="range" min="0" max="4" value="1"></label>
-        <label class="range-label">Edge thickness <output id="thicknessVal">1</output><input id="edgeThickness" type="range" min="1" max="5" value="1"></label>
-        <label class="range-label">Brightness <output id="brightnessVal">0</output><input id="brightness" type="range" min="-100" max="100" value="0"></label>
-        <label class="range-label">Contrast <output id="contrastVal">0</output><input id="contrast" type="range" min="-100" max="100" value="0"></label>
-        <label class="range-label">Rotation <output id="rval">0°</output><input id="rotation" type="range" min="0" max="360" value="0"></label>
-        <label class="control-label">Edge color<select id="color"><option value="#087967">Boundary teal</option><option value="#ff5bc8">Magenta</option><option value="#a5d94b">Lime</option><option value="#f0a63d">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label>
-        <label class="toggle-row"><span><b>Invert image</b><small>Swap light and dark</small></span><input id="invert" type="checkbox"></label>
-        <label class="toggle-row"><span><b>Transparent background</b><small>Keep empty edge areas clear</small></span><input id="transparent" type="checkbox"></label>
-        <label class="toggle-row"><span><b>Contrast normalization</b><small>Stretch the image intensity range before edge detection</small></span><input id="autoNormalize" type="checkbox"></label>
-        <label class="control-label">Edge continuity<select id="morphology"><option value="off">Natural edges</option><option value="close">Connect small gaps</option><option value="open">Remove tiny specks</option><option value="close-open">Connect and clean</option></select></label>
-        <label class="control-label">Sketch rendering<select id="sketchVariant"><option value="pencil">Pencil / graphite</option><option value="charcoal">Charcoal tone</option><option value="crosshatch">Cross-hatching</option></select></label>
-        <label class="range-label">Stencil threshold offset <output id="stencilOffsetVal">0</output><input id="stencilOffset" type="range" min="-80" max="80" value="0"></label>
-        <label class="toggle-row"><span><b>Blueprint grid</b><small>Overlay a technical reference grid</small></span><input id="blueprintGrid" type="checkbox" checked></label>
-        <label class="range-label">Blueprint grid spacing <output id="gridSpacingVal">32</output><input id="gridSpacing" type="range" min="12" max="80" value="32"></label>
+        <label class="control-label control-advanced">Output style<select id="style"><option value="outline">Color outline</option><option value="edge-map">Dark edge map</option><option value="overlay">Photo + edges</option><option value="blueprint">Blueprint</option><option value="gray">Grayscale</option><option value="threshold">Threshold mask</option><option value="neon">Neon glow</option><option value="coloring">Coloring book</option></select></label>
+        <label class="control-label control-medium">Edge method<select id="edgeMethod"><option value="canny">Connected, clean outlines (recommended)</option><option value="sobel">Strong shape boundaries</option><option value="laplacian">Fine detail and texture</option></select><small class="control-help" id="edgeMethodHelp">Keeps strong boundaries and joins nearby weaker edge sections for cleaner, more continuous outlines.</small></label>
+        <label class="range-label control-medium">Low threshold <output id="tval">31</output><input id="threshold" type="range" min="0" max="255" value="31"></label>
+        <label class="range-label control-medium">High threshold <output id="highVal">78</output><input id="highThreshold" type="range" min="1" max="255" value="78"></label>
+        <label class="range-label control-medium">Noise smoothing <output id="nval">1</output><input id="cleanup" type="range" min="0" max="4" value="1"></label>
+        <label class="range-label control-medium">Edge thickness <output id="thicknessVal">1</output><input id="edgeThickness" type="range" min="1" max="5" value="1"></label>
+        <label class="range-label control-advanced">Brightness <output id="brightnessVal">0</output><input id="brightness" type="range" min="-100" max="100" value="0"></label>
+        <label class="range-label control-medium">Contrast <output id="contrastVal">0</output><input id="contrast" type="range" min="-100" max="100" value="0"></label>
+        <label class="range-label control-advanced">Rotation <output id="rval">0°</output><input id="rotation" type="range" min="0" max="360" value="0"></label>
+        <label class="control-label control-medium">Edge color<select id="color"><option value="#087967">Boundary teal</option><option value="#ff5bc8">Magenta</option><option value="#a5d94b">Lime</option><option value="#f0a63d">Amber</option><option value="#5685ff">Electric blue</option><option value="#ffffff">White</option></select></label>
+        <label class="toggle-row control-advanced"><span><b>Invert image</b><small>Swap light and dark</small></span><input id="invert" type="checkbox"></label>
+        <label class="toggle-row control-advanced"><span><b>Transparent background</b><small>Keep empty edge areas clear</small></span><input id="transparent" type="checkbox"></label>
+        <label class="toggle-row control-advanced"><span><b>Contrast normalization</b><small>Stretch the image intensity range before edge detection</small></span><input id="autoNormalize" type="checkbox"></label>
+        <label class="control-label control-advanced">Edge continuity<select id="morphology"><option value="off">Natural edges</option><option value="close">Connect small gaps</option><option value="open">Remove tiny specks</option><option value="close-open">Connect and clean</option></select></label>
+        <label class="control-label control-advanced">Sketch rendering<select id="sketchVariant"><option value="pencil">Pencil / graphite</option><option value="charcoal">Charcoal tone</option><option value="crosshatch">Cross-hatching</option></select></label>
+        <label class="range-label control-advanced">Stencil threshold offset <output id="stencilOffsetVal">0</output><input id="stencilOffset" type="range" min="-80" max="80" value="0"></label>
+        <label class="toggle-row control-advanced"><span><b>Blueprint grid</b><small>Overlay a technical reference grid</small></span><input id="blueprintGrid" type="checkbox" checked></label>
+        <label class="range-label control-advanced">Blueprint grid spacing <output id="gridSpacingVal">32</output><input id="gridSpacing" type="range" min="12" max="80" value="32"></label>
       </div>
       </details>
       <div class="control-footer"><span id="processingStatus" role="status">Ready</span></div>
