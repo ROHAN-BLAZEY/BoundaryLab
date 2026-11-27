@@ -54,7 +54,8 @@
   }
 
   function sync() {
-    if (settings.autoLinkThresholds !== false) settings.low = Math.max(1, Math.round(settings.high * 0.4));
+    settings.autoLinkThresholds = true;
+    settings.low = Math.max(1, Math.round(settings.high * 0.4));
     const controls = {
       style: settings.style,
       edgeMethod: settings.edgeMethod,
@@ -650,9 +651,9 @@
 
   function updateEdgeMethodHelp() {
     const descriptions = {
-      canny: 'Keeps strong boundaries and joins nearby weaker edge sections for cleaner, more continuous outlines.',
-      sobel: 'Finds strong changes in brightness. Useful for simple, bold shapes, but can produce thicker edges.',
-      laplacian: 'Highlights rapid intensity changes, including small details and texture. It can also pick up more noise.',
+      canny: 'Keeps strong boundaries and joins nearby weaker edge sections for cleaner, more continuous outlines. The automatic low threshold is used here.',
+      sobel: 'Finds strong changes in brightness directly. Useful for simple, bold shapes; the high threshold sets the cutoff.',
+      laplacian: 'Highlights rapid intensity changes, including small details and texture. It can also pick up more noise; the high threshold sets the cutoff.',
     };
     const help = $('#edgeMethodHelp');
     if (help) help.textContent = descriptions[settings.edgeMethod] || descriptions.canny;
