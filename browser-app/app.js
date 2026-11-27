@@ -33,7 +33,7 @@
   }
 
   function showFrame(index, smooth = true) {
-    if (!frameGrid || !matchMedia('(max-width: 600px)').matches) return;
+    if (!frameGrid || !matchMedia('(max-width: 850px)').matches) return;
     const target = Math.max(0, Math.min(2, index));
     frameGrid.scrollTo({ left: target * frameGrid.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
     updateFrameIndicator();
@@ -50,6 +50,7 @@
     button.addEventListener('click', () => showFrame(Number(button.dataset.frameIndex)));
   });
   window.addEventListener('resize', updateFrameIndicator, { passive: true });
+  requestAnimationFrame(updateFrameIndicator);
 
   const source = $('#source');
   const grayCanvas = $('#gray');
