@@ -498,3 +498,14 @@ body[data-page="studio"] .export-menu[open] .menu { display:block; }
  body[data-page="studio"] .hero-actions .button { flex:0 0 auto; }
  body[data-page="studio"] .tool-actions { justify-content:flex-start; }
 }
+
+
+/* Preset and export menus: keep all choices visible and easy to tap. */
+body[data-page="studio"] .project-select { min-width: 118px; min-height: 34px; padding: 7px 28px 7px 10px; color: var(--text); background-color: var(--panel); border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 11px; }
+body[data-page="studio"] .export-menu .menu { display: none; position: absolute; z-index: 30; top: calc(100% + 7px); right: 0; width: max-content; max-width: min(94vw, 520px); flex-direction: row; align-items: center; gap: 4px; padding: 6px; white-space: nowrap; overflow-x: auto; }
+body[data-page="studio"] .export-menu[open] .menu { display: flex; }
+body[data-page="studio"] .export-menu .menu button { width: auto; flex: 0 0 auto; padding: 9px 11px; text-align: center; }
+@media (max-width: 600px) {
+  body[data-page="studio"] .export-menu .menu { right: auto; left: 0; max-width: calc(100vw - 28px); }
+  body[data-page="studio"] .project-select { min-width: 118px; }
+}
