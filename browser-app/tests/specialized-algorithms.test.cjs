@@ -224,7 +224,7 @@ test('mobile control tabs initialize as a collection and hero copy is removed',(
 test('Image Studio initializes all frame controls before attaching image upload',()=>{
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
  assert.equal((app.match(/\$\$\('\[data-frame-index\]'\)\.forEach/g)||[]).length,2);
- assert.doesNotMatch(app,/\$\('\[data-frame-index\]'\)\.forEach/);
+ assert.doesNotMatch(app,/(^|[^$])\$\('\[data-frame-index\]'\)\.forEach/m);
  assert.match(app,/async function loadFile/);
  assert.match(app,/supportedExtension/);
  assert.match(app,/readAsDataURL/);
