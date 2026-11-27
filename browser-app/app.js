@@ -637,6 +637,12 @@
       settings[settingById[element.id]] = element.type === 'checkbox'
         ? element.checked
         : element.type === 'range' ? Number(element.value) : element.value;
+      if (element.id === 'highThreshold' && settings.autoLinkThresholds !== false) {
+        settings.low = Math.max(1, Math.round(settings.high * 0.4));
+        $('#tval').textContent = settings.low;
+        $('#threshold').value = settings.low;
+      }
+      if (element.id === 'edgeMethod') updateEdgeMethodHelp();
       saveHistory();
       schedule();
     });
