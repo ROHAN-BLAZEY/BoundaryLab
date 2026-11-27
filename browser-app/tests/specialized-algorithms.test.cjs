@@ -128,18 +128,17 @@ test('live contour cleanup applies minimum contour length and gap closing',()=>{
 
 
 test('low and high thresholds operate independently in connected edge detection',()=>{
- const width=64,height=64,gray=new Uint8Array(width*height);
- for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-  const ramp=Math.min(136,20+(x-8)*4);
-  gray[y*width+x]=x<8?20:x<38?ramp:206;
- }
- const lowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:2,high:80});
- const highLowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:80});
- assert.notDeepEqual(Array.from(lowSetting),Array.from(highLowSetting),'changing low threshold alone should change weak-edge linking');
- const lowerHigh=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:120});
- assert.notDeepEqual(Array.from(lowSetting),Array.from(lowerHigh),'changing high threshold alone should change strong-edge selection');
+ const width=8,height=8,thin=new Uint8Array(width*height);
+ thin[3*width+3]=100;
+ thin[3*width+4]=40;
+ thin[3*width+5]=40;
+ const weakLinked=context.hysteresis(thin,width,height,20,80);
+ const weakRejected=context.hysteresis(thin,width,height,50,80);
+ assert.notDeepEqual(Array.from(weakLinked),Array.from(weakRejected),'changing low threshold alone should include or reject connected weak edges');
+ const strongAccepted=context.hysteresis(thin,width,height,20,80);
+ const strongRejected=context.hysteresis(thin,width,height,20,120);
+ assert.notDeepEqual(Array.from(strongAccepted),Array.from(strongRejected),'changing high threshold alone should change which edges seed the connection');
 });
-
 test('Image Studio applies image-specific parameter analysis for each preset',()=>{
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
  assert.match(app,/function autoTuneForImage\(mode = settings\.workspaceMode\)/);
