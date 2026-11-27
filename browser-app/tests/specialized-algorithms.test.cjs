@@ -107,7 +107,7 @@ test('live output is strictly white edges on a pure black background for every p
  const width=64,height=64,pixels=new Uint8ClampedArray(width*height*4);
  for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<32?18:238;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
  for(const workspaceMode of ['clean-outline','detailed-outline','bold-outline','stencil','blueprint','technical-drawing']){
-  context.self.onmessage({data:{id:211,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode,style:'edge-map',livePreview:true,edgeMethod:'canny',low:12,high:35,cleanup:0,edgeThickness:1,edgeSoftness:0,contrast:0,brightness:0,autoNormalize:false,edgeLinking:70,gapClosing:0,minContourLength:1,transparent:false,invert:false,blueprintGrid:false}}});
+  context.self.onmessage({data:{id:211,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode,style:'edge-map',livePreview:true,edgeMethod:'canny',low:12,high:35,cleanup:0,edgeThickness:1,edgeSoftness:0,contrast:0,brightness:0,autoNormalize:false,edgeLinking:70,gapClosing:0,minContourLength:1,color:'#ffffff',transparent:false,invert:false,blueprintGrid:false}}});
   const out=context.lastMessage.output;
   for(let i=0;i<out.length;i+=4){const r=out[i],g=out[i+1],b=out[i+2];assert.ok((r===0&&g===0&&b===0)||(r===255&&g===255&&b===255),workspaceMode+' output must be monochrome');assert.equal(out[i+3],255);}
  }
@@ -133,8 +133,8 @@ test('low and high thresholds operate independently in connected edge detection'
   const ramp=Math.max(0,Math.min(100,20+(x-8)*4));
   gray[y*width+x]=x<8?20:x<34?ramp:x<38?100:230;
  }
- const lowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:80});
- const highLowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:55,high:80});
+ const lowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:2,high:80});
+ const highLowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:80});
  assert.notDeepEqual(Array.from(lowSetting),Array.from(highLowSetting),'changing low threshold alone should change weak-edge linking');
  const lowerHigh=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:120});
  assert.notDeepEqual(Array.from(lowSetting),Array.from(lowerHigh),'changing high threshold alone should change strong-edge selection');
