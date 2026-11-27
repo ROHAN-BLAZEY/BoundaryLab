@@ -130,8 +130,8 @@ test('live contour cleanup applies minimum contour length and gap closing',()=>{
 test('low and high thresholds operate independently in connected edge detection',()=>{
  const width=64,height=64,gray=new Uint8Array(width*height);
  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-  const ramp=Math.max(0,Math.min(100,20+(x-8)*4));
-  gray[y*width+x]=x<8?20:x<34?ramp:x<38?100:230;
+  const ramp=Math.min(136,20+(x-8)*4);
+  gray[y*width+x]=x<8?20:x<38?ramp:206;
  }
  const lowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:2,high:80});
  const highLowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:80});
