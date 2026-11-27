@@ -175,6 +175,24 @@ function extractBlueprintInk(pixels,gray,width,height){
 
 function workspaceProcess(gray,width,height,settings,pixels){
   const mode=settings.workspaceMode||'standard';let edge=null,tone=gray;
+  if(settings.livePreview){
+    const low=Math.max(4,Number(settings.low)||18),high=Math.max(low+8,Number(settings.high)||58);
+    if(mode==='blueprint'){
+      const sourceInk=extractBlueprintInk(pixels,gray,width,height);
+      edge=sourceInk||detectEdges(edgeAwareSmooth(gray,width,height),width,height,{...settings,low:low*.78,high:high*.9,edgeMethod:settings.edgeMethod||'scharr'});
+    }else if(mode==='clean-outline'){
+      edge=detectEdges(edgeAwareSmooth(gray,width,height),width,height,{...settings,low:low*.78,high:high*.9,edgeMethod:settings.edgeMethod||'canny'});
+    }else if(mode==='technical-drawing'){
+      edge=detectEdges(smooth(gray,width,height,1),width,height,{...settings,low:low*.72,high:high*.92,edgeMethod:settings.edgeMethod||'scharr'});
+    }else if(mode==='stencil'){
+      tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);
+      edge=new Uint8Array(tone.length);
+      for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const i=y*width+x,v=tone[i];if(v!==tone[i-1]||v!==tone[i+1]||v!==tone[i-width]||v!==tone[i+width])edge[i]=255;}
+    }else{
+      edge=detectEdges(gray,width,height,{...settings,edgeMethod:settings.edgeMethod||'canny'});
+    }
+    return {edge,tone};
+  }
   if(mode==='clean-outline'){
     const ink=adaptiveInkMask(gray,width,height);
     edge=ink.lightBackground?thinBinaryMask(removeTinyMaskComponents(ink.mask,width,height,3),width,height)
