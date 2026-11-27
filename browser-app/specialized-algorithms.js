@@ -121,6 +121,11 @@ function adaptiveInkMask(gray,width,height){
   }
   return {mask,lightBackground};
 }
+function binaryBoundaryMask(source,width,height){
+ const out=new Uint8Array(source.length);
+ for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const i=y*width+x;if(source[i]&&( !source[i-1]||!source[i+1]||!source[i-width]||!source[i+width]))out[i]=255;}
+ return out;
+}
 function thinBinaryMask(source,width,height){
   let image=source.slice(),changed=true,iterations=0;
   while(changed&&iterations++<24){
@@ -183,7 +188,7 @@ function workspaceProcess(gray,width,height,settings,pixels){
   }else if(mode==='technical-drawing'){
     const ink=adaptiveInkMask(gray,width,height);
     edge=ink.lightBackground
-      ?thinBinaryMask(removeTinyMaskComponents(ink.mask,width,height,2),width,height)
+      ?binaryBoundaryMask(removeTinyMaskComponents(ink.mask,width,height,2),width,height)
       :multiScaleEdges(gray,width,height,settings);
   }else if(mode==='blueprint'){
     const sourceInk=extractBlueprintInk(pixels,gray,width,height);
