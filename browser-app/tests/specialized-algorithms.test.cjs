@@ -254,10 +254,10 @@ test('short disconnected contour components are removed without damaging long ob
 test('phone camera capture uses native image capture input and export uses a format dropdown',()=>{
  const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
- assert.match(html,/id="cameraCapture"[^>]*accept="image\\/\\*"[^>]*capture="environment"/);
- assert.match(html,/id="exportFormat"/);
- assert.match(html,/id="exportImage"/);
+ assert.ok(html.includes('id="cameraCapture"') && html.includes('accept="image/*"') && html.includes('capture="environment"'));
+ assert.ok(html.includes('id="exportFormat"'));
+ assert.ok(html.includes('id="exportImage"'));
  assert.doesNotMatch(html,/Export settings|Import settings/);
- assert.match(app,/\\$\\('#cameraCapture'\\)\\.addEventListener\\('change'/);
- assert.match(app,/exportAs\\(\\$\\('#exportFormat'\\)\\?\\.value \\|\\| 'png'\\)/);
+ assert.ok(app.includes("$('#cameraCapture').addEventListener('change'"));
+ assert.ok(app.includes("exportAs($('#exportFormat')?.value || 'png')"));
 });
