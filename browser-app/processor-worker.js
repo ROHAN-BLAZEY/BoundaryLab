@@ -476,13 +476,15 @@ self.onmessage = ({ data: job }) => {
     const link = Math.max(0, Math.min(100, Number(settings.edgeLinking) || 65));
     const requestedLow = Math.max(1, Math.min(liveHigh - 1, Number(adjustedSettings.low) || 28));
     const linkedLow = Math.max(1, Math.min(liveHigh - 1, Math.round(requestedLow * (1 - link * 0.0035))));
-    detected = detectEdges(smoothed, width, height, { ...adjustedSettings, low: linkedLow, edgeMethod: settings.edgeMethod || 'canny' });
+    const presetMode = ['blueprint','clean-outline','technical-drawing','stencil'].includes(settings.workspaceMode);
+    if (presetMode) {
+      specialized = workspaceProcess(smoothed, width, height, { ...adjustedSettings, livePreview: true, low: linkedLow }, pixels);
+      detected = specialized.edge || detectEdges(smoothed, width, height, { ...adjustedSettings, low: linkedLow, edgeMethod: settings.edgeMethod || 'canny' });
+    } else {
+      detected = detectEdges(smoothed, width, height, { ...adjustedSettings, low: linkedLow, edgeMethod: settings.edgeMethod || 'canny' });
+    }
     detected = liveContourCleanup(detected, width, height, settings.gapClosing, settings.minContourLength);
     detected = stabilizeLiveEdges(detected, previousBuffer ? new Uint8Array(previousBuffer) : null, width, height, settings.temporalStability);
-    if (settings.workspaceMode === 'stencil') {
-      specialized = workspaceProcess(smoothed, width, height, adjustedSettings, pixels);
-      detected = specialized.edge || detected;
-    }
     modeStyle = 'edge-map';
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : adjusted;
   } else {
