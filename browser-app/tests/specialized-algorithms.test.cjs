@@ -127,11 +127,26 @@ test('live contour cleanup applies minimum contour length and gap closing',()=>{
 });
 
 
-test('automatic low threshold follows 40 percent of high threshold',()=>{
- const width=48,height=48,pixels=new Uint8ClampedArray(width*height*4);
- for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<24?25:225;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
- const run=low=>{context.self.onmessage({data:{id:401,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode:'clean-outline',style:'edge-map',edgeMethod:'canny',low,high:60,autoLinkThresholds:true,cleanup:0,edgeThickness:1,color:'#ffffff',contrast:0,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false,morphology:'off'}}});return context.lastMessage.edge;};
- assert.deepEqual(Array.from(run(2)),Array.from(run(55)),'manual low values must not override linked low threshold');
+test('low and high thresholds operate independently in connected edge detection',()=>{
+ const width=64,height=64,gray=new Uint8Array(width*height);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const ramp=Math.max(0,Math.min(100,20+(x-8)*4));
+  gray[y*width+x]=x<8?20:x<34?ramp:x<38?100:230;
+ }
+ const lowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:80});
+ const highLowSetting=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:55,high:80});
+ assert.notDeepEqual(Array.from(lowSetting),Array.from(highLowSetting),'changing low threshold alone should change weak-edge linking');
+ const lowerHigh=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:8,high:120});
+ assert.notDeepEqual(Array.from(lowSetting),Array.from(lowerHigh),'changing high threshold alone should change strong-edge selection');
+});
+
+test('Image Studio applies image-specific parameter analysis for each preset',()=>{
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(app,/function autoTuneForImage\(mode = settings\.workspaceMode\)/);
+ for(const mode of ['clean-outline','detailed-outline','bold-outline','sketch','technical-drawing','stencil']) assert.ok(app.includes("'"+mode+"'"),mode+' should have its own tuning profile');
+ assert.match(app,/settings\.low = Math\.max\(4,/);
+ assert.match(app,/settings\.high = Math\.max\(settings\.low \+ 1,/);
+ assert.match(app,/autoTuneForImage\(settings\.workspaceMode\)/);
 });
 
 test('Sobel strong-boundary mode and connected Canny mode are distinct',()=>{
