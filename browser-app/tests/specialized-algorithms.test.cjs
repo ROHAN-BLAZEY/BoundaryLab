@@ -125,3 +125,36 @@ test('live contour cleanup applies minimum contour length and gap closing',()=>{
  assert.equal(cleaned[5*width+5],0,'isolated point should be removed');
  assert.equal(cleaned.length,width*height);
 });
+
+
+test('adaptive stencil segmentation retains a dark object against a brighter uneven background',()=>{
+ const width=80,height=64,gray=new Uint8Array(width*height);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const background=150+Math.round(70*x/(width-1));
+  gray[y*width+x]=x>=25&&x<56&&y>=14&&y<51?35:background;
+ }
+ const mask=api.makeStencilMask(gray,width,height,0);
+ let inside=0,outside=0;
+ for(let y=20;y<45;y++)for(let x=30;x<50;x++)inside+=mask[y*width+x]===255?1:0;
+ for(let y=5;y<10;y++)for(let x=5;x<20;x++)outside+=mask[y*width+x]===255?1:0;
+ assert.ok(inside>350,'dark object should be retained as the foreground mask');
+ assert.ok(outside<40,'bright background should not become foreground');
+});
+
+test('still-image edge-map presets render opaque black backgrounds and white detected edges',()=>{
+ const width=64,height=64,pixels=new Uint8ClampedArray(width*height*4);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const i=(y*width+x)*4,v=x<32?25:225;
+  pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;
+ }
+ for(const workspaceMode of ['clean-outline','detailed-outline','bold-outline','stencil','technical-drawing']){
+  context.self.onmessage({data:{id:301,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode,style:'edge-map',edgeMethod:'canny',low:12,high:35,cleanup:0,edgeThickness:1,color:'#ffffff',contrast:0,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false,morphology:'off',stencilOffset:0}}});
+  const result=context.lastMessage;
+  assert.ok(result.edge.some(v=>v===255),workspaceMode+' should detect boundaries');
+  for(let i=0;i<result.output.length;i+=4){
+   const rgb=[result.output[i],result.output[i+1],result.output[i+2]];
+   assert.ok((rgb[0]===0&&rgb[1]===0&&rgb[2]===0)||(rgb[0]===255&&rgb[1]===255&&rgb[2]===255),workspaceMode+' must render monochrome edges');
+   assert.equal(result.output[i+3],255,'background must remain opaque');
+  }
+ }
+});
