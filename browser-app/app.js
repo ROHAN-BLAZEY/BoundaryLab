@@ -426,15 +426,21 @@
 
   function download(blob, name) {
     if (!blob) return toast('Could not create export');
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    link.href = url;
     link.download = name;
+    link.hidden = true;
+    document.body.append(link);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    toast('Downloaded ' + name);
+    link.remove();
+    // Keep the object URL alive long enough for mobile browsers to begin the download.
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    toast('Export prepared: ' + name);
   }
 
   function exportAs(type) {
+    if (!['png', 'jpeg', 'webp', 'svg'].includes(type)) return toast('Choose a supported export format');
     if (!lastOutput || !basePixels) return toast('Open an image first');
     const name = filename + (type === 'jpeg' ? '.jpg' : '.' + type);
 
@@ -801,8 +807,9 @@
     render();
   });
   $('.export-menu [data-export]').forEach((button) => button.addEventListener('click', () => {
+    const menu = $('.export-menu');
     exportAs(button.dataset.export);
-    $('.export-menu').open = false;
+    if (menu) menu.open = false;
   }));
 
   $('#modalClose').addEventListener('click', () => closeModal($('#modal')));
