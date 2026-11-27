@@ -2,6 +2,39 @@
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+  const frameGrid = $('#frameGrid');
+  const frameViewNames = ['Colour image', 'Grayscale image', 'Processed image'];
+  let frameScrollRaf = 0;
+
+  function updateFrameIndicator() {
+    if (!frameGrid) return;
+    const index = Math.max(0, Math.min(2, Math.round(frameGrid.scrollLeft / Math.max(1, frameGrid.clientWidth))));
+    $('#frameViewName').textContent = frameViewNames[index];
+    $('[data-frame-index]').forEach((button) => {
+      if (Number(button.dataset.frameIndex) === index) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+  }
+
+  function showFrame(index, smooth = true) {
+    if (!frameGrid || !matchMedia('(max-width: 600px)').matches) return;
+    const target = Math.max(0, Math.min(2, index));
+    frameGrid.scrollTo({ left: target * frameGrid.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
+    updateFrameIndicator();
+  }
+
+  frameGrid?.addEventListener('scroll', () => {
+    if (frameScrollRaf) cancelAnimationFrame(frameScrollRaf);
+    frameScrollRaf = requestAnimationFrame(() => {
+      frameScrollRaf = 0;
+      updateFrameIndicator();
+    });
+  }, { passive: true });
+  $('[data-frame-index]').forEach((button) => {
+    button.addEventListener('click', () => showFrame(Number(button.dataset.frameIndex)));
+  });
+  window.addEventListener('resize', updateFrameIndicator, { passive: true });
+
   const source = $('#source');
   const grayCanvas = $('#gray');
   const result = $('#result');
@@ -312,6 +345,7 @@
       sync();
       saveHistory();
       render();
+      requestAnimationFrame(() => showFrame(2, false));
       toast('Image opened locally');
     };
     image.onerror = () => {
