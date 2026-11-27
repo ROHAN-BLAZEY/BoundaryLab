@@ -277,7 +277,7 @@ function colorFromHex(hex) {
 }
 
 function makeOutput(pixels, gray, edge, width, height, settings) {
-  const rgb = settings.style === 'edge-map' ? [255, 255, 255] : colorFromHex(settings.color);
+  const rgb = colorFromHex(settings.color);
   const output = new Uint8ClampedArray(width * height * 4);
   const transparentBackgroundStyles = new Set(['outline', 'edge-map', 'blueprint', 'neon', 'coloring']);
   const contrast = Math.max(-100, Math.min(100, Number(settings.contrast) || 0));
@@ -375,7 +375,7 @@ self.onmessage = ({ data: job }) => {
   const gray = makeGrayscale(pixels, width * height);
   const adjusted = settings.autoNormalize ? normalizeContrast(adjustGrayscale(gray, settings)) : adjustGrayscale(gray, settings);
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
-  const offset = settings.workspaceMode === 'stencil' ? 0 : Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
+  const offset = Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
   const adjustedSettings = { ...settings, low: Math.max(0, Math.min(255, Number(settings.low) + offset)), high: Math.max(1, Math.min(255, Number(settings.high) + offset)) };
   let specialized = { edge: null, tone: adjusted };
   let detected;
@@ -404,8 +404,8 @@ self.onmessage = ({ data: job }) => {
     modeStyle = settings.style || (settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : 'edge-map');
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
-  const refined = settings.livePreview ? detected : (settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0))));
-  const edge = settings.livePreview ? thickenEdges(refined, width, height, settings.edgeThickness) : settings.workspaceMode === 'bold-outline' ? refined : thickenEdges(refined, width, height, settings.edgeThickness);
+  const refined = settings.livePreview ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
+  const edge = thickenEdges(refined, width, height, settings.edgeThickness);
   let softMask = null;
   if (settings.livePreview && Number(settings.edgeSoftness) > 0) {
     const radius = Math.min(2, Math.max(1, Number(settings.edgeSoftness)));
