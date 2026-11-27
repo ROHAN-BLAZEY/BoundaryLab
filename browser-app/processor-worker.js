@@ -260,6 +260,29 @@ function erode(edge, width, height) {
   return next;
 }
 
+function removeShortContours(edge, width, height, minLength = 4) {
+  const minimum = Math.max(1, Math.min(2000, Math.round(Number(minLength) || 1)));
+  if (minimum <= 1) return edge;
+  const output = edge.slice(), seen = new Uint8Array(edge.length), queue = new Int32Array(edge.length);
+  for (let start = 0; start < edge.length; start++) {
+    if (!edge[start] || seen[start]) continue;
+    let head = 0, tail = 0;
+    queue[tail++] = start; seen[start] = 1;
+    while (head < tail) {
+      const index = queue[head++], x = index % width, y = (index - x) / width;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+        const next = ny * width + nx;
+        if (edge[next] && !seen[next]) { seen[next] = 1; queue[tail++] = next; }
+      }
+    }
+    if (tail < minimum) for (let i = 0; i < tail; i++) output[queue[i]] = 0;
+  }
+  return output;
+}
+
 function refineEdges(edge, width, height, mode, cleanup) {
   let next = edge;
   if (mode === 'close' || mode === 'close-open') next = erode(dilate(next, width, height), width, height);
@@ -413,7 +436,13 @@ self.onmessage = ({ data: job }) => {
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
   const morphed = settings.livePreview ? detected : refineEdges(detected, width, height, settings.morphology || 'off', 0);
-  const refined = settings.livePreview || Number(settings.cleanup) < 1 ? morphed : cleanSpecks(morphed, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
+  let refined = settings.livePreview || Number(settings.cleanup) < 1 ? morphed : cleanSpecks(morphed, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
+  if (settings.livePreview) {
+    refined = removeShortContours(refined, width, height, Math.max(1, Number(settings.minContourLength) || 1));
+  } else {
+    const contourMinimum = ({ 'clean-outline': 4, 'detailed-outline': 2, 'bold-outline': 7, 'sketch': 2, 'technical-drawing': 3, 'blueprint': 3, 'stencil': 5 })[settings.workspaceMode] || 3;
+    refined = removeShortContours(refined, width, height, contourMinimum);
+  }
   const edge = thickenEdges(refined, width, height, settings.edgeThickness);
   let softMask = null;
   if (settings.livePreview && Number(settings.edgeSoftness) > 0) {
