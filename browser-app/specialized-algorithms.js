@@ -148,6 +148,7 @@ function thinBinaryMask(source,width,height){
   const out=new Uint8Array(image.length);for(let i=0;i<image.length;i++)out[i]=image[i]?255:0;return out;
 }
 function removeTinyMaskComponents(mask,width,height,minArea=3){
+  minArea=Math.max(Number(minArea)||3,Math.round(mask.length*.000015));
   const output=mask.slice(),seen=new Uint8Array(mask.length),queue=new Int32Array(mask.length);
   for(let start=0;start<mask.length;start++){
     if(!mask[start]||seen[start])continue;let head=0,tail=0;queue[tail++]=start;seen[start]=1;
