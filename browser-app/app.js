@@ -34,7 +34,7 @@
   let galleryObjectUrls = [];
 
   const defaults = {
-    style: 'edge-map', edgeMethod: 'canny', low: 31, high: 78, autoLinkThresholds: true,
+    style: 'edge-map', edgeMethod: 'canny', low: 31, high: 78, autoLinkThresholds: false,
     cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 0,
     rotation: 0, color: '#ffffff', invert: false, transparent: false,
     autoNormalize: true, morphology: 'off', workspaceMode: 'clean-outline', sketchVariant: 'pencil', stencilOffset: 0, blueprintGrid: false, gridSpacing: 32,
@@ -54,8 +54,7 @@
   }
 
   function sync() {
-    settings.autoLinkThresholds = true;
-    settings.low = Math.max(1, Math.round(settings.high * 0.4));
+    settings.autoLinkThresholds = false;
     const controls = {
       style: settings.style,
       edgeMethod: settings.edgeMethod,
@@ -82,7 +81,7 @@
       else element.value = value;
     }
     $('#tval').textContent = settings.low;
-    $('#threshold').disabled = true;
+    $('#threshold').disabled = false;
     $('#highVal').textContent = settings.high;
     $('#nval').textContent = settings.cleanup;
     $('#thicknessVal').textContent = settings.edgeThickness;
@@ -210,6 +209,66 @@
     debounce = setTimeout(render, 90);
   }
 
+  function autoTuneForImage(mode = settings.workspaceMode) {
+    if (!basePixels || baseW < 3 || baseH < 3) return;
+    const gray = new Uint8Array(baseW * baseH);
+    const luminanceHistogram = new Uint32Array(256);
+    for (let i = 0, p = 0; i < gray.length; i++, p += 4) {
+      const value = Math.round(basePixels[p] * 0.299 + basePixels[p + 1] * 0.587 + basePixels[p + 2] * 0.114);
+      gray[i] = value;
+      luminanceHistogram[value]++;
+    }
+    const gradientHistogram = new Uint32Array(256);
+    let gradientCount = 0;
+    for (let y = 1; y < baseH - 1; y += 2) {
+      for (let x = 1; x < baseW - 1; x += 2) {
+        const i = y * baseW + x;
+        const gx = -gray[i - baseW - 1] + gray[i - baseW + 1] - 2 * gray[i - 1] + 2 * gray[i + 1] - gray[i + baseW - 1] + gray[i + baseW + 1];
+        const gy = -gray[i - baseW - 1] - 2 * gray[i - baseW] - gray[i - baseW + 1] + gray[i + baseW - 1] + 2 * gray[i + baseW] + gray[i + baseW + 1];
+        gradientHistogram[Math.min(255, Math.round(Math.hypot(gx, gy) / (4 * Math.SQRT2)))]++;
+        gradientCount++;
+      }
+    }
+    const percentile = (histogram, count, fraction) => {
+      const target = Math.max(1, Math.ceil(count * fraction));
+      let total = 0;
+      for (let value = 0; value < histogram.length; value++) {
+        total += histogram[value];
+        if (total >= target) return value;
+      }
+      return histogram.length - 1;
+    };
+    const presets = {
+      'clean-outline': [0.54, 0.86],
+      'detailed-outline': [0.38, 0.74],
+      'bold-outline': [0.66, 0.92],
+      sketch: [0.48, 0.80],
+      'technical-drawing': [0.60, 0.89],
+      stencil: [0.52, 0.84],
+      blueprint: [0.58, 0.88],
+    };
+    const [lowPercentile, highPercentile] = presets[mode] || presets['clean-outline'];
+    const measuredLow = percentile(gradientHistogram, gradientCount, lowPercentile);
+    const measuredHigh = percentile(gradientHistogram, gradientCount, highPercentile);
+    settings.low = Math.max(4, Math.min(220, measuredLow || 12));
+    settings.high = Math.max(settings.low + 1, Math.min(255, measuredHigh || settings.low + 28));
+    settings.autoLinkThresholds = false;
+
+    const p10 = percentile(luminanceHistogram, gray.length, 0.10);
+    const p90 = percentile(luminanceHistogram, gray.length, 0.90);
+    const strongGradientCount = gradientCount - gradientHistogram.slice(0, 24).reduce((sum, value) => sum + value, 0);
+    const textureRatio = strongGradientCount / Math.max(1, gradientCount);
+    settings.cleanup = textureRatio > 0.24 ? 2 : textureRatio > 0.12 ? 1 : 0;
+    if (mode === 'stencil') settings.cleanup = Math.max(1, settings.cleanup);
+    settings.edgeThickness = mode === 'bold-outline' ? 3 : mode === 'stencil' ? 2 : 1;
+    settings.morphology = mode === 'bold-outline' || mode === 'technical-drawing' || mode === 'blueprint'
+      ? 'close' : mode === 'stencil' ? 'close-open' : mode === 'sketch' ? 'open' : 'off';
+    settings.autoNormalize = true;
+    settings.contrast = p90 - p10 < 85 ? 12 : p90 - p10 < 125 ? 6 : 0;
+    settings.brightness = 0;
+    settings.edgeMethod = mode === 'technical-drawing' || mode === 'sketch' ? 'sobel' : 'canny';
+  }
+
   function loadFile(file, presetSettings = null) {
     if (!file) return;
     if (file.size > 30 * 1024 * 1024) return toast('Image exceeds the 30 MB limit');
@@ -231,6 +290,7 @@
       filename = file.name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '-') || 'boundarylab';
       currentAsset = file;
       if (presetSettings) Object.assign(settings, { ...defaults, ...presetSettings });
+      autoTuneForImage(settings.workspaceMode);
 
       sequence++;
       lastOutput = null;
@@ -512,6 +572,7 @@
 
   function resetAll() {
     Object.assign(settings, defaults);
+    autoTuneForImage(settings.workspaceMode);
     sync();
     saveHistory();
     render();
@@ -569,6 +630,7 @@
     const preset = source[name];
     if (!preset) return toast('That preset is no longer available');
     Object.assign(settings, { ...defaults, ...preset });
+    autoTuneForImage(settings.workspaceMode);
     sync();
     saveHistory();
     render();
@@ -638,12 +700,8 @@
       settings[settingById[element.id]] = element.type === 'checkbox'
         ? element.checked
         : element.type === 'range' ? Number(element.value) : element.value;
-      if (element.id === 'highThreshold' && settings.autoLinkThresholds === true) {
-        $('#highVal').textContent = settings.high;
-        settings.low = Math.max(1, Math.round(settings.high * 0.4));
-        $('#tval').textContent = settings.low;
-        $('#threshold').value = settings.low;
-      }
+      if (element.id === 'highThreshold') $('#highVal').textContent = settings.high;
+      if (element.id === 'threshold') $('#tval').textContent = settings.low;
       if (element.id === 'edgeMethod') updateEdgeMethodHelp();
       saveHistory();
       schedule();
@@ -676,11 +734,11 @@
     event.target.value = '';
   });
   $$('.quick-presets [data-quick-preset]').forEach((button) => button.addEventListener('click', () => applyPreset(`Built in:${button.dataset.quickPreset}`)));
-  $('#simpleDetail').addEventListener('input', (event) => { settings.high = Math.max(1, Math.min(255, Math.round(128 - Number(event.target.value) * .9))); settings.low = Math.max(1, Math.round(settings.high * 0.4)); sync(); saveHistory(); schedule(); });
+  $('#simpleDetail').addEventListener('input', (event) => { settings.high = Math.max(1, Math.min(255, Math.round(128 - Number(event.target.value) * .9))); sync(); saveHistory(); schedule(); });
   $('#simpleSmoothness').addEventListener('input', (event) => { settings.cleanup = Math.round(Number(event.target.value) / 25); saveHistory(); schedule(); });
   $('#simpleThickness').addEventListener('input', (event) => { settings.edgeThickness = Number(event.target.value); saveHistory(); schedule(); });
   $('#simpleContrast').addEventListener('input', (event) => { settings.contrast = Number(event.target.value); saveHistory(); schedule(); });
-  $('#autoEnhance').addEventListener('click', () => { if (!basePixels) return toast('Open an image first'); Object.assign(settings, { autoNormalize: true, cleanup: 1, low: 26, high: 76, contrast: 12, morphology: 'close' }); sync(); saveHistory(); render(); toast('Auto enhancement applied'); });
+  $('#autoEnhance').addEventListener('click', () => { if (!basePixels) return toast('Open an image first'); autoTuneForImage(settings.workspaceMode); sync(); saveHistory(); render(); toast('Image-specific enhancement applied'); });
   $('#undo').addEventListener('click', () => {
     if (historyIndex <= 0) return;
     historyIndex--;
