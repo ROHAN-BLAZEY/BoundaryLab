@@ -445,13 +445,13 @@ self.onmessage = ({ data: job }) => {
     detected = liveContourCleanup(detected, width, height, settings.gapClosing, settings.minContourLength);
     detected = stabilizeLiveEdges(detected, previousBuffer ? new Uint8Array(previousBuffer) : null, width, height, settings.temporalStability);
     if (settings.workspaceMode === 'stencil') {
-      specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
+      specialized = workspaceProcess(smoothed, width, height, adjustedSettings, pixels);
       detected = specialized.edge || detected;
     }
     modeStyle = 'edge-map';
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : adjusted;
   } else {
-    specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
+    specialized = workspaceProcess(smoothed, width, height, adjustedSettings, pixels);
     detected = specialized.edge || detectEdges(smoothed, width, height, adjustedSettings);
     // Presets select the processing algorithm; the Style control selects its rendering.
     // Stencil is rendered as a high-contrast black field with white detected boundaries.
