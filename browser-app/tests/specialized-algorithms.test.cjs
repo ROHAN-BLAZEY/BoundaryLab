@@ -240,3 +240,24 @@ test('Live Studio removes obsolete notes and auto-tunes preset thresholds from c
  assert.match(live,/percentiles:\[0\.20,0\.64\]/);
  assert.match(worker,/requestedLow/);
 });
+
+
+test('short disconnected contour components are removed without damaging long object outlines',()=>{
+ const width=32,height=24,edge=new Uint8Array(width*height);
+ edge[2*width+2]=255;
+ for(let x=8;x<25;x++)edge[12*width+x]=255;
+ const cleaned=context.removeShortContours(edge,width,height,5);
+ assert.equal(cleaned[2*width+2],0,'isolated speck should be removed');
+ for(let x=8;x<25;x++)assert.equal(cleaned[12*width+x],255,'long contour should remain connected');
+});
+
+test('phone camera capture uses native image capture input and export uses a format dropdown',()=>{
+ const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(html,/id="cameraCapture"[^>]*accept="image\\/\\*"[^>]*capture="environment"/);
+ assert.match(html,/id="exportFormat"/);
+ assert.match(html,/id="exportImage"/);
+ assert.doesNotMatch(html,/Export settings|Import settings/);
+ assert.match(app,/\\$\\('#cameraCapture'\\)\\.addEventListener\\('change'/);
+ assert.match(app,/exportAs\\(\\$\\('#exportFormat'\\)\\?\\.value \\|\\| 'png'\\)/);
+});
