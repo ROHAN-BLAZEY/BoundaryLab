@@ -399,7 +399,9 @@ self.onmessage = ({ data: job }) => {
   } else {
     specialized = workspaceProcess(smoothed, width, height, adjustedSettings);
     detected = specialized.edge || detectEdges(smoothed, width, height, adjustedSettings);
-    modeStyle = settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'stencil' ? 'stencil' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : settings.style;
+    // Presets select the processing algorithm; the Style control selects its rendering.
+    // Stencil is rendered as a high-contrast black field with white detected boundaries.
+    modeStyle = settings.style || (settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : 'edge-map');
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
   const refined = settings.livePreview ? detected : (settings.workspaceMode && settings.workspaceMode !== 'standard' ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0))));
