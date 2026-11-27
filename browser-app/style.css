@@ -509,3 +509,7 @@ body[data-page="studio"] .export-menu .menu button { width: auto; flex: 0 0 auto
   body[data-page="studio"] .export-menu .menu { right: auto; left: 0; max-width: calc(100vw - 28px); }
   body[data-page="studio"] .project-select { min-width: 118px; }
 }
+
+
+/* Author modal layout must not override the native hidden attribute. */
+.modal[hidden] { display: none !important; }
