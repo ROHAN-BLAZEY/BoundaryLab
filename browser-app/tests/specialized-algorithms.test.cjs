@@ -127,6 +127,24 @@ test('live contour cleanup applies minimum contour length and gap closing',()=>{
 });
 
 
+test('automatic low threshold follows 40 percent of high threshold',()=>{
+ const width=48,height=48,pixels=new Uint8ClampedArray(width*height*4);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){const i=(y*width+x)*4,v=x<24?25:225;pixels[i]=pixels[i+1]=pixels[i+2]=v;pixels[i+3]=255;}
+ const run=low=>{context.self.onmessage({data:{id:401,pixels:pixels.buffer.slice(0),width,height,settings:{workspaceMode:'clean-outline',style:'edge-map',edgeMethod:'canny',low,high:60,autoLinkThresholds:true,cleanup:0,edgeThickness:1,color:'#ffffff',contrast:0,brightness:0,autoNormalize:false,invert:false,transparent:false,blueprintGrid:false,morphology:'off'}}});return context.lastMessage.edge;};
+ assert.deepEqual(Array.from(run(2)),Array.from(run(55)),'manual low values must not override linked low threshold');
+});
+
+test('Sobel strong-boundary mode and connected Canny mode are distinct',()=>{
+ const width=64,height=64,gray=new Uint8Array(width*height);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const base=x<32?35:210;
+  gray[y*width+x]=Math.max(0,Math.min(255,base+((x+y)%5===0?18:0)));
+ }
+ const sobel=api.detectEdges(gray,width,height,{edgeMethod:'sobel',low:24,high:65,autoLinkThresholds:true});
+ const canny=api.detectEdges(gray,width,height,{edgeMethod:'canny',low:24,high:65,autoLinkThresholds:true});
+ assert.notDeepEqual(Array.from(sobel),Array.from(canny),'Sobel should show direct strong gradients while Canny links weak neighbours');
+});
+
 test('adaptive stencil segmentation retains a dark object against a brighter uneven background',()=>{
  const width=80,height=64,gray=new Uint8Array(width*height);
  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
