@@ -209,3 +209,13 @@ test('mobile Image Studio has one full-width swipe viewer and responsive control
  assert.match(app,/matchMedia\('\(max-width: 850px\)'\)/);
  assert.match(app,/createImageBitmap\(file/);
 });
+
+
+test('mobile control tabs initialize as a collection and hero copy is removed',()=>{
+ const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(app,/const controlTabs = \$\$\('\[data-control-tab\]'\)/);
+ assert.match(app,/controlTabs\.forEach\(\(tab\) => tab\.addEventListener\('click'/);
+ assert.match(app,/\$\('#file'\)\.addEventListener\('change'/);
+ assert.doesNotMatch(html,/IMAGE PROCESSING WORKSPACE|Make boundaries|Compare your original, grayscale, and processed image side by side/);
+});
