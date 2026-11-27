@@ -322,7 +322,9 @@
   async function loadFile(file, presetSettings = null) {
     if (!file) return;
     if (file.size > 30 * 1024 * 1024) return toast('Image exceeds the 30 MB limit');
-    if (!file.type.startsWith('image/')) return toast('Choose an image file');
+    const extension = (file.name.split('.').pop() || '').toLowerCase();
+    const supportedExtension = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif', 'heic', 'heif'].includes(extension);
+    if (file.type && !file.type.startsWith('image/') && !supportedExtension) return toast('Choose a supported image file');
     if (file.size === 0) return toast('This image file is empty or could not be read');
     $('#file').value = '';
     const token = ++fileLoadToken;
@@ -332,15 +334,28 @@
         try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { bitmap = null; }
       }
       if (!bitmap) {
-        const url = URL.createObjectURL(file);
+        const decodeImage = (sourceUrl) => new Promise((resolve, reject) => {
+          const candidate = new Image();
+          candidate.onload = () => resolve(candidate);
+          candidate.onerror = () => reject(new Error('decode'));
+          candidate.src = sourceUrl;
+        });
         try {
-          image = await new Promise((resolve, reject) => {
-            const candidate = new Image();
-            candidate.onload = () => resolve(candidate);
-            candidate.onerror = () => reject(new Error('decode'));
-            candidate.src = url;
+          if (URL.createObjectURL) {
+            const url = URL.createObjectURL(file);
+            try { image = await decodeImage(url); } finally { URL.revokeObjectURL(url); }
+          } else {
+            throw new Error('object-url-unavailable');
+          }
+        } catch {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('read'));
+            reader.readAsDataURL(file);
           });
-        } finally { URL.revokeObjectURL(url); }
+          image = await decodeImage(dataUrl);
+        }
       }
       if (token !== fileLoadToken) { bitmap?.close?.(); return; }
       const imageWidth = bitmap?.width || image?.naturalWidth || 0;
@@ -376,7 +391,7 @@
       bitmap?.close?.();
       if (token !== fileLoadToken) return;
       console.error('Image load failed:', error);
-      toast('Could not open this image. Try JPG, PNG or WebP.');
+      toast('Could not decode this image in your browser. Try JPG, PNG or WebP.');
     }
   }
 
