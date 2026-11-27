@@ -299,3 +299,31 @@ test('camera handlers are registered after safe export handler setup and modal c
  assert.match(html,/<video id="cameraPreview" autoplay playsinline muted>/);
  assert.match(css,/\.modal\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
 });
+
+test('clean outline extracts and thins dark line art on a white page',()=>{
+ const width=48,height=48,gray=new Uint8Array(width*height);gray.fill(245);
+ for(let x=8;x<=39;x++)for(let t=-2;t<=2;t++)gray[(24+t)*width+x]=18;
+ const result=api.workspaceProcess(gray,width,height,{workspaceMode:'clean-outline',low:20,high:60,edgeMethod:'canny'});
+ assert.ok(result.edge.some(v=>v===255));
+ assert.ok(result.edge.filter(v=>v===255).length<width*8,'ink stroke should be thinned rather than rendered as a thick filled band');
+});
+test('technical drawing uses adaptive dark-line extraction on a light sheet',()=>{
+ const width=64,height=64,gray=new Uint8Array(width*height);gray.fill(250);
+ for(let x=8;x<56;x++)gray[18*width+x]=20;
+ for(let y=18;y<55;y++)gray[y*width+8]=20;
+ const result=api.workspaceProcess(gray,width,height,{workspaceMode:'technical-drawing',low:20,high:60,edgeMethod:'sobel'});
+ assert.ok(result.edge.some(v=>v===255));
+ assert.ok(result.edge[18*width+30]===255||result.edge[17*width+30]===255||result.edge[19*width+30]===255);
+});
+test('blueprint mode extracts existing light linework from a blue drawing sheet',()=>{
+ const width=32,height=32,gray=new Uint8Array(width*height),pixels=new Uint8ClampedArray(width*height*4);
+ for(let i=0;i<gray.length;i++){gray[i]=65;pixels[i*4]=12;pixels[i*4+1]=70;pixels[i*4+2]=135;pixels[i*4+3]=255;}
+ for(let x=4;x<28;x++){const i=(12*width+x);gray[i]=245;pixels[i*4]=240;pixels[i*4+1]=245;pixels[i*4+2]=238;}
+ const result=api.workspaceProcess(gray,width,height,{workspaceMode:'blueprint',low:20,high:60,edgeMethod:'canny'},pixels);
+ assert.ok(result.edge[12*width+12]===255,'existing white blueprint strokes should be retained');
+});
+test('preset studio auto-tunes thresholds after loading source images',()=>{
+ const source=fs.readFileSync(path.join(root,'preset-studio.js'),'utf8');
+ assert.match(source,/function autoTuneForUpload/);
+ assert.match(source,/autoTuneForUpload\(\);process\(\)/);
+});
