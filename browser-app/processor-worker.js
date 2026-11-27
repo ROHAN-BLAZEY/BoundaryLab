@@ -153,9 +153,32 @@ function scharrMagnitude(gray, width, height) {
   } return {magnitude,direction};
 }
 
+function bridgeContourGaps(edge, width, height) {
+  const output = edge.slice();
+  const directions = [[1,0],[0,1],[1,1],[1,-1]];
+  for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+    const index = y * width + x;
+    if (edge[index]) continue;
+    for (const [dx, dy] of directions) {
+      const before = (y - dy) * width + x - dx;
+      const after = (y + dy) * width + x + dx;
+      if (!edge[before] || !edge[after]) continue;
+      const px = -dy, py = dx;
+      const sideA = (y + py) * width + x + px;
+      const sideB = (y - py) * width + x - px;
+      // Require local line support so unrelated nearby edges are not joined.
+      if (edge[sideA] || edge[sideB] || edge[before - dy * width - dx] || edge[after + dy * width + dx]) {
+        output[index] = 255;
+        break;
+      }
+    }
+  }
+  return output;
+}
+
 function liveContourCleanup(edge,width,height,gapClosing,minLength) {
   let current=edge;const gap=Math.max(0,Math.min(2,Number(gapClosing)||0));
-  for(let pass=0;pass<gap;pass++){current=erode(dilate(current,width,height),width,height);}
+  for(let pass=0;pass<gap;pass++) current=bridgeContourGaps(current,width,height);
   const minimum=Math.max(1,Math.min(500,Number(minLength)||1));if(minimum<=1)return current;
   const output=current.slice(),seen=new Uint8Array(current.length),queue=new Int32Array(current.length);
   for(let start=0;start<current.length;start++){if(!current[start]||seen[start])continue;let head=0,tail=0;queue[tail++]=start;seen[start]=1;
@@ -436,7 +459,8 @@ self.onmessage = ({ data: job }) => {
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
   const morphed = settings.livePreview ? detected : refineEdges(detected, width, height, settings.morphology || 'off', 0);
-  let refined = settings.livePreview || Number(settings.cleanup) < 1 ? morphed : cleanSpecks(morphed, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
+  const linked = bridgeContourGaps(morphed, width, height);
+  let refined = settings.livePreview || Number(settings.cleanup) < 1 ? linked : cleanSpecks(linked, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
   if (settings.livePreview) {
     refined = removeShortContours(refined, width, height, Math.max(1, Number(settings.minContourLength) || 1));
   } else {
