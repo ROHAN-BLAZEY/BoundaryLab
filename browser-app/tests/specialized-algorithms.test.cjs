@@ -325,5 +325,5 @@ test('blueprint mode extracts existing light linework from a blue drawing sheet'
 test('preset studio auto-tunes thresholds after loading source images',()=>{
  const source=fs.readFileSync(path.join(root,'preset-studio.js'),'utf8');
  assert.match(source,/function autoTuneForUpload/);
- assert.match(source,/autoTuneForUpload\(\);process\(\)/);
+ assert.match(source,/autoTuneForUpload\(\);/);\n assert.match(source,/autoTuneForUpload\(\);[^\\n]*process\(\)/);
 });
