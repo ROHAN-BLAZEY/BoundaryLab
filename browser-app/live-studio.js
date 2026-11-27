@@ -14,16 +14,16 @@ const mobile=matchMedia('(max-width:700px)').matches||matchMedia('(pointer:coars
 const memory=navigator.deviceMemory||4,cores=navigator.hardwareConcurrency||4;
 const constrained=memory<=3||cores<=4;
 const deviceLabel=mobile?'Mobile device':(constrained?'Laptop · efficiency mode':'Desktop / laptop');
-let stream=null,raf=0,stopped=true,busy=false,job=0,lastProcess=0,lastMetrics=0,processedFrames=0,processedFps=0,latency=0,slowStreak=0,fastStreak=0,adaptiveScale=1,latest=null,lastEdge=null,activeWidth=0,activeHeight=0;
+let stream=null,raf=0,stopped=true,busy=false,job=0,lastProcess=0,lastMetrics=0,processedFrames=0,processedFps=0,latency=0,slowStreak=0,fastStreak=0,adaptiveScale=1,latest=null,lastEdge=null,activeWidth=0,activeHeight=0,autoTunePending=true;
 const say=message=>{status.textContent=message;};
 const settingsIds=['liveMode','livePerformance','liveDetail','liveEdgeMethod','liveFpsLimit','liveResolutionSelect','liveLow','liveHigh','liveLinking','liveTemporal','liveSmooth','liveGapClosing','liveMinContour','liveThickness','liveEdgeSoftness','liveContrast','liveBrightness','liveNormalize'];
 const presets={
- 'clean-outline':{low:24,high:68,smooth:1,thickness:1,contrast:8,edgeMethod:'canny',edgeLinking:72,gapClosing:1,minContourLength:4},
- 'detailed-outline':{low:14,high:48,smooth:0,thickness:1,contrast:15,edgeMethod:'scharr',edgeLinking:82,gapClosing:0,minContourLength:2},
- 'bold-outline':{low:36,high:95,smooth:1,thickness:2,contrast:18,edgeMethod:'canny',edgeLinking:68,gapClosing:1,minContourLength:8},
- 'stencil':{low:30,high:76,smooth:2,thickness:1,contrast:20,edgeMethod:'canny',edgeLinking:76,gapClosing:2,minContourLength:8},
- 'blueprint':{low:22,high:62,smooth:1,thickness:1,contrast:10,edgeMethod:'scharr',edgeLinking:80,gapClosing:1,minContourLength:3},
- 'technical-drawing':{low:18,high:58,smooth:1,thickness:1,contrast:14,edgeMethod:'scharr',edgeLinking:84,gapClosing:1,minContourLength:3}
+ 'clean-outline':{low:24,high:68,smooth:1,thickness:1,contrast:8,edgeMethod:'canny',edgeLinking:72,gapClosing:1,minContourLength:4,percentiles:[0.30,0.76]},
+ 'detailed-outline':{low:14,high:48,smooth:0,thickness:1,contrast:15,edgeMethod:'scharr',edgeLinking:82,gapClosing:0,minContourLength:2,percentiles:[0.20,0.64]},
+ 'bold-outline':{low:36,high:95,smooth:1,thickness:2,contrast:18,edgeMethod:'canny',edgeLinking:68,gapClosing:1,minContourLength:8,percentiles:[0.44,0.86]},
+ 'stencil':{low:30,high:76,smooth:2,thickness:1,contrast:20,edgeMethod:'canny',edgeLinking:76,gapClosing:2,minContourLength:8,percentiles:[0.36,0.78]},
+ 'blueprint':{low:22,high:62,smooth:1,thickness:1,contrast:10,edgeMethod:'scharr',edgeLinking:80,gapClosing:1,minContourLength:3,percentiles:[0.28,0.74]},
+ 'technical-drawing':{low:18,high:58,smooth:1,thickness:1,contrast:14,edgeMethod:'scharr',edgeLinking:84,gapClosing:1,minContourLength:3,percentiles:[0.24,0.70]}
 };
 function updateLabels(){
  for(const [id,out] of [['liveDetail','detailValue'],['liveFpsLimit','fpsValue'],['liveLow','lowValue'],['liveHigh','highValue'],['liveLinking','linkValue'],['liveTemporal','temporalValue'],['liveSmooth','smoothValue'],['liveGapClosing','gapValue'],['liveMinContour','contourValue'],['liveThickness','thicknessValue'],['liveEdgeSoftness','softnessValue'],['liveContrast','contrastValue'],['liveBrightness','brightnessValue']])$('#'+out).textContent=$('#'+id).value;
@@ -79,6 +79,7 @@ function frameLoop(now){
  workCtx.imageSmoothingEnabled=true;workCtx.imageSmoothingQuality='high';workCtx.drawImage(video,0,0,d.width,d.height);
  let image;
  try{image=workCtx.getImageData(0,0,d.width,d.height);}catch(error){say('The browser could not read the camera frame. Restart the camera and check site permissions.');return;}
+ if(autoTunePending)tunePresetFromFrame(image);
  const id=++job,buffer=image.data.buffer.slice(image.data.byteOffset,image.data.byteOffset+image.data.byteLength);
  busy=true;
  const previousBuffer=lastEdge?lastEdge.slice().buffer:null;
@@ -135,7 +136,35 @@ function applyPreset(){
  const preset=presets[$('#liveMode').value];if(!preset)return;
  const controls={low:'liveLow',high:'liveHigh',smooth:'liveSmooth',thickness:'liveThickness',contrast:'liveContrast',edgeMethod:'liveEdgeMethod',edgeLinking:'liveLinking',gapClosing:'liveGapClosing',minContourLength:'liveMinContour'};
  for(const [key,value] of Object.entries(preset)){const id=controls[key];if(id&&$('#'+id))$('#'+id).value=value;}
+ autoTunePending=true;
  updateLabels();
+}
+function tunePresetFromFrame(image){
+ const preset=presets[$('#liveMode').value];if(!preset)return;
+ const {width,height,data}=image;
+ const gray=new Uint8Array(width*height);
+ for(let i=0,p=0;i<gray.length;i++,p+=4)gray[i]=Math.round(data[p]*.299+data[p+1]*.587+data[p+2]*.114);
+ const histogram=new Uint32Array(256);let count=0;
+ for(let y=1;y<height-1;y+=2)for(let x=1;x<width-1;x+=2){
+  const i=y*width+x;
+  const gx=-gray[i-width-1]+gray[i-width+1]-2*gray[i-1]+2*gray[i+1]-gray[i+width-1]+gray[i+width+1];
+  const gy=-gray[i-width-1]-2*gray[i-width]-gray[i-width+1]+gray[i+width-1]+2*gray[i+width]+gray[i+width+1];
+  const magnitude=Math.min(255,Math.round(Math.hypot(gx,gy)/(4*Math.SQRT2)));
+  if(magnitude>0){histogram[magnitude]++;count++;}
+ }
+ if(count<24)return;
+ const percentile=fraction=>{
+  const target=Math.max(1,Math.ceil(count*fraction));let sum=0;
+  for(let value=1;value<256;value++){sum+=histogram[value];if(sum>=target)return value;}
+  return 255;
+ };
+ const [lowP,highP]=preset.percentiles;
+ const low=Math.max(4,Math.min(150,percentile(lowP)));
+ const high=Math.max(low+8,Math.min(230,percentile(highP)));
+ $('#liveLow').value=low;$('#liveHigh').value=high;
+ updateLabels();
+ autoTunePending=false;
+ say('Preset tuned to the current camera image.');
 }
 function resetSettings(){
  $('#liveMode').value='clean-outline';$('#livePerformance').value='balanced';$('#liveDetail').value=50;setProfile();
