@@ -190,3 +190,22 @@ test('still-image edge-map presets render opaque black backgrounds and white det
   }
  }
 });
+
+
+test('mobile Image Studio has one full-width swipe viewer and responsive control tabs',()=>{
+ const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
+ const css=fs.readFileSync(path.join(root,'style.css'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+ assert.match(html,/id="frameGrid"/);
+ assert.equal((html.match(/data-frame-index=/g)||[]).length,3);
+ assert.match(html,/data-control-tab="simple"/);
+ assert.match(html,/data-control-tab="medium"/);
+ assert.match(html,/data-control-tab="advanced"/);
+ assert.match(css,/@media \(max-width:850px\)/);
+ assert.match(css,/scroll-snap-type:x mandatory/);
+ assert.match(css,/touch-action:pan-x pan-y/);
+ assert.match(css,/\.frames-section\{position:sticky/);
+ assert.match(css,/\.quick-presets\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(app,/matchMedia\('\(max-width: 850px\)'\)/);
+ assert.match(app,/createImageBitmap\(file/);
+});
