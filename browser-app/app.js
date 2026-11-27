@@ -82,7 +82,7 @@
       else element.value = value;
     }
     $('#tval').textContent = settings.low;
-    $('#threshold').disabled = settings.autoLinkThresholds !== false;
+    $('#threshold').disabled = true;
     $('#highVal').textContent = settings.high;
     $('#nval').textContent = settings.cleanup;
     $('#thicknessVal').textContent = settings.edgeThickness;
@@ -638,7 +638,8 @@
       settings[settingById[element.id]] = element.type === 'checkbox'
         ? element.checked
         : element.type === 'range' ? Number(element.value) : element.value;
-      if (element.id === 'highThreshold' && settings.autoLinkThresholds !== false) {
+      if (element.id === 'highThreshold' && settings.autoLinkThresholds === true) {
+        $('#highVal').textContent = settings.high;
         settings.low = Math.max(1, Math.round(settings.high * 0.4));
         $('#tval').textContent = settings.low;
         $('#threshold').value = settings.low;
