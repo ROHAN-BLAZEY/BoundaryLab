@@ -404,7 +404,8 @@ self.onmessage = ({ data: job }) => {
     modeStyle = settings.style || (settings.workspaceMode === 'sketch' ? 'sketch' : settings.workspaceMode === 'technical-drawing' ? 'technical' : settings.workspaceMode === 'blueprint' ? 'blueprint' : 'edge-map');
     tone = settings.workspaceMode === 'stencil' ? (specialized.tone || adjusted) : (specialized.tone || adjusted);
   }
-  const refined = settings.livePreview ? detected : refineEdges(detected, width, height, settings.morphology || 'off', Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
+  const morphed = settings.livePreview ? detected : refineEdges(detected, width, height, settings.morphology || 'off', 0);
+  const refined = settings.livePreview || Number(settings.cleanup) < 1 ? morphed : cleanSpecks(morphed, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
   const edge = thickenEdges(refined, width, height, settings.edgeThickness);
   let softMask = null;
   if (settings.livePreview && Number(settings.edgeSoftness) > 0) {
