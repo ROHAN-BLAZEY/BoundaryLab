@@ -176,6 +176,41 @@ function bridgeContourGaps(edge, width, height) {
   return output;
 }
 
+function bridgeContourGapsDirectional(edge,width,height,maxGap=2) {
+  const output=edge.slice(),limit=Math.max(1,Math.min(3,Number(maxGap)||1));
+  const endpoints=[];
+  for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){
+    const i=y*width+x;if(!edge[i])continue;let count=0,nx=0,ny=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if((dx||dy)&&edge[(y+dy)*width+x+dx]){count++;nx=dx;ny=dy;}
+    if(count===1)endpoints.push({x,y,ox:-nx,oy:-ny});
+  }
+  const claimed=new Uint8Array(edge.length);
+  for(let a=0;a<endpoints.length;a++){
+    const p=endpoints[a],pi=p.y*width+p.x;if(claimed[pi])continue;
+    let best=-1,bestScore=-Infinity;
+    for(let b=a+1;b<endpoints.length;b++){
+      const q=endpoints[b],qi=q.y*width+q.x;if(claimed[qi])continue;
+      const dx=q.x-p.x,dy=q.y-p.y,dist=Math.hypot(dx,dy);
+      if(dist<2||dist>limit+1.01)continue;
+      const ux=dx/dist,uy=dy/dist;
+      const faceP=p.ox*ux+p.oy*uy,faceQ=q.ox*(-ux)+q.oy*(-uy);
+      if(faceP<.55||faceQ<.55)continue;
+      const tangent=Math.abs(p.ox*q.oy-p.oy*q.ox);
+      if(tangent>.9)continue;
+      const score=faceP+faceQ-dist*.08-tangent*.2;
+      if(score>bestScore){bestScore=score;best=b;}
+    }
+    if(best<0)continue;
+    const q=endpoints[best],dx=q.x-p.x,dy=q.y-p.y,steps=Math.max(Math.abs(dx),Math.abs(dy));
+    for(let step=1;step<steps;step++){
+      const x=Math.round(p.x+dx*step/steps),y=Math.round(p.y+dy*step/steps);
+      output[y*width+x]=255;
+    }
+    claimed[pi]=1;claimed[q.y*width+q.x]=1;
+  }
+  return output;
+}
+
 function liveContourCleanup(edge,width,height,gapClosing,minLength) {
   let current=edge;const gap=Math.max(0,Math.min(2,Number(gapClosing)||0));
   for(let pass=0;pass<gap;pass++) current=bridgeContourGaps(current,width,height);
@@ -462,7 +497,7 @@ self.onmessage = ({ data: job }) => {
   const linked = bridgeContourGaps(morphed, width, height);
   let refined = settings.livePreview || Number(settings.cleanup) < 1 ? linked : cleanSpecks(linked, width, height, Math.min(4, Math.max(2, Number(settings.cleanup) + 1)));
   if (settings.livePreview) {
-    refined = removeShortContours(refined, width, height, Math.max(1, Number(settings.minContourLength) || 1));
+    const liveMinimum = Math.max(Number(settings.minContourLength)||1, Math.round(Math.min(width,height)*0.006));\n    refined = removeShortContours(refined, width, height, liveMinimum);
   } else {
     const contourMinimum = ({ 'clean-outline': 4, 'detailed-outline': 2, 'bold-outline': 7, 'sketch': 2, 'technical-drawing': 3, 'blueprint': 3, 'stencil': 5 })[settings.workspaceMode] || 3;
     refined = removeShortContours(refined, width, height, contourMinimum);
