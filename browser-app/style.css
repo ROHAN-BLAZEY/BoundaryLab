@@ -331,3 +331,101 @@ footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px
 
 /* Plain-language help text for advanced Image Studio controls. */
 .control-help { grid-column: 1 / -1; margin: -0.35rem 0 0; font-size: 0.82rem; line-height: 1.45; opacity: 0.78; }
+
+
+/* Mobile Image Studio: pinned shared-height viewer with native horizontal swipe. */
+@media (max-width: 600px) {
+  body[data-page="studio"] .topbar { display: flex !important; }
+  body[data-page="studio"] main { overflow: visible; }
+  body[data-page="studio"] .frames-section {
+    position: sticky;
+    top: 60px;
+    z-index: 7;
+    display: flex;
+    flex-direction: column;
+    height: min(44svh, 360px);
+    min-height: 250px;
+    margin: 0 -12px;
+    padding: 9px 12px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    box-shadow: 0 12px 24px #0003;
+  }
+  body[data-page="studio"] .frames-title {
+    flex: 0 0 auto;
+    align-items: center;
+    margin: 0 2px 7px;
+  }
+  body[data-page="studio"] .frames-title h2 { font-size: 15px; }
+  body[data-page="studio"] .frame-swipe-indicator {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  body[data-page="studio"] .frame-view-dots { display: flex; align-items: center; gap: 6px; }
+  body[data-page="studio"] .frame-view-dots button {
+    width: 7px;
+    height: 7px;
+    min-width: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--subtle);
+    opacity: .55;
+    cursor: pointer;
+  }
+  body[data-page="studio"] .frame-view-dots button[aria-current="true"] {
+    width: 18px;
+    border-radius: 99px;
+    background: var(--accent);
+    opacity: 1;
+  }
+  body[data-page="studio"] .frame-grid {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
+    scrollbar-width: none;
+    border-radius: 11px;
+  }
+  body[data-page="studio"] .frame-grid::-webkit-scrollbar { display: none; }
+  body[data-page="studio"] .frame-panel {
+    display: flex;
+    flex: 0 0 100%;
+    flex-direction: column;
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+    padding: 8px;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  body[data-page="studio"] .panel-heading { flex: 0 0 auto; margin-bottom: 6px; }
+  body[data-page="studio"] .panel-heading h3 { font-size: 12px; }
+  body[data-page="studio"] .canvas-wrap,
+  body[data-page="studio"] .frame-panel:last-child .canvas-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 120px;
+    max-height: none;
+  }
+  body[data-page="studio"] .frames-title > p { display: none; }
+}
+@media (max-width: 390px) {
+  body[data-page="studio"] .frames-section { min-height: 238px; }
+  body[data-page="studio"] .frame-swipe-indicator { gap: 6px; font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="studio"] .frame-grid { scroll-behavior: auto; }
+}
