@@ -798,7 +798,10 @@
     updateHistoryButtons();
     render();
   });
-  $('#exportImage')?.addEventListener('click', () => exportAs($('#exportFormat')?.value || 'png'));
+  $('.export-menu [data-export]').forEach((button) => button.addEventListener('click', () => {
+    exportAs(button.dataset.export);
+    $('.export-menu').open = false;
+  }));
 
   $('#modalClose').addEventListener('click', () => closeModal($('#modal')));
   $('#galleryClose').addEventListener('click', () => closeModal($('#galleryModal')));
@@ -856,12 +859,52 @@
     });
   });
 
-  $('#camera').addEventListener('click', () => $('#cameraCapture').click());
-  $('#cameraCapture').addEventListener('change', (event) => {
-    const file = event.target.files?.[0];
-    if (file) loadFile(file);
-    event.target.value = '';
+  let photoStream = null;
+  const cameraModal = $('#cameraModal');
+  const cameraPreview = $('#cameraPreview');
+  function closePhotoCamera() {
+    photoStream?.getTracks().forEach((track) => track.stop());
+    photoStream = null;
+    cameraPreview.pause();
+    cameraPreview.srcObject = null;
+    $('#cameraTakePhoto').disabled = true;
+    cameraModal.hidden = true;
+  }
+  $('#camera').addEventListener('click', async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !isSecureContext) {
+      toast('Camera access requires HTTPS and a supported browser');
+      return;
+    }
+    try {
+      photoStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      });
+      cameraPreview.srcObject = photoStream;
+      cameraModal.hidden = false;
+      await cameraPreview.play();
+      $('#cameraTakePhoto').disabled = !cameraPreview.videoWidth;
+    } catch (error) {
+      closePhotoCamera();
+      toast(error.name === 'NotAllowedError' ? 'Allow camera permission in browser settings' : 'Camera could not start');
+    }
   });
+  $('#cameraTakePhoto').addEventListener('click', () => {
+    if (!cameraPreview.videoWidth || !cameraPreview.videoHeight) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = cameraPreview.videoWidth;
+    canvas.height = cameraPreview.videoHeight;
+    const context = canvas.getContext('2d', { alpha: false });
+    context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) return toast('Could not capture this photo');
+      closePhotoCamera();
+      loadFile(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }));
+    }, 'image/jpeg', 0.94);
+  });
+  $('#cameraCancel').addEventListener('click', closePhotoCamera);
+  $('#cameraBackdrop').addEventListener('click', closePhotoCamera);
+  window.addEventListener('pagehide', closePhotoCamera);
 
   $('#themeToggle').addEventListener('click', () => {
     setTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
