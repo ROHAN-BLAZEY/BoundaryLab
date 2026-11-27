@@ -102,12 +102,27 @@ function makeSketchTone(gray,width,height,variant='pencil'){
 }
 function workspaceProcess(gray,width,height,settings){
   const mode=settings.workspaceMode||'standard';let edge=null,tone=gray;
-  if(mode==='clean-outline'){edge=detectEdges(edgeAwareSmooth(gray,width,height),width,height,{...settings,edgeMethod:settings.edgeMethod||'canny',low:Math.max(8,settings.low),high:Math.max(Number(settings.low)+16,settings.high)});edge=refineEdges(edge,width,height,'close',Math.min(3,Number(settings.cleanup)||0));}
-  else if(mode==='detailed-outline'){edge=cleanSpecks(multiScaleEdges(gray,width,height,settings),width,height,2);edge=refineEdges(edge,width,height,'close',1);}
-  else if(mode==='bold-outline'){edge=cleanSpecks(refineEdges(detectEdges(smooth(gray,width,height,1),width,height,{...settings,edgeMethod:settings.edgeMethod||'canny'}),width,height,'close',2),width,height,2);}
-  else if(mode==='sketch'){tone=makeSketchTone(gray,width,height,settings.sketchVariant||'pencil');edge=detectEdges(gray,width,height,{...settings,edgeMethod:settings.edgeMethod||'sobel'});}
-  else if(mode==='technical-drawing'||mode==='blueprint'){edge=cleanSpecks(multiScaleEdges(gray,width,height,settings),width,height,2);edge=refineEdges(edge,width,height,'close',2);}
-  else if(mode==='stencil'){tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);edge=new Uint8Array(tone.length);for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const i=y*width+x,v=tone[i];if(v!==tone[i-1]||v!==tone[i+1]||v!==tone[i-width]||v!==tone[i+width])edge[i]=255;}}
+  // Each workspace owns its detector/tone generation. Shared cleanup,
+  // morphology and thickness are applied once by processor-worker.js.
+  if(mode==='clean-outline'){
+    edge=detectEdges(edgeAwareSmooth(gray,width,height),width,height,{...settings,edgeMethod:settings.edgeMethod||'canny'});
+  }else if(mode==='detailed-outline'){
+    edge=multiScaleEdges(gray,width,height,settings);
+  }else if(mode==='bold-outline'){
+    edge=detectEdges(smooth(gray,width,height,1),width,height,{...settings,edgeMethod:settings.edgeMethod||'canny'});
+  }else if(mode==='sketch'){
+    tone=makeSketchTone(gray,width,height,settings.sketchVariant||'pencil');
+    edge=detectEdges(gray,width,height,{...settings,edgeMethod:settings.edgeMethod||'sobel'});
+  }else if(mode==='technical-drawing'||mode==='blueprint'){
+    edge=multiScaleEdges(gray,width,height,settings);
+  }else if(mode==='stencil'){
+    tone=makeStencilMask(gray,width,height,Number(settings.stencilOffset)||0);
+    edge=new Uint8Array(tone.length);
+    for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){
+      const i=y*width+x,v=tone[i];
+      if(v!==tone[i-1]||v!==tone[i+1]||v!==tone[i-width]||v!==tone[i+width])edge[i]=255;
+    }
+  }
   return {edge,tone};
 }
 function blueprintGrid(output,width,height,settings){
