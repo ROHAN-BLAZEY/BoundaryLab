@@ -251,18 +251,6 @@ test('short disconnected contour components are removed without damaging long ob
  for(let x=8;x<25;x++)assert.equal(cleaned[12*width+x],255,'long contour should remain connected');
 });
 
-test('phone camera capture uses native image capture input and export uses a format dropdown',()=>{
- const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
- const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
- assert.ok(html.includes('id="cameraCapture"') && html.includes('accept="image/*"') && html.includes('capture="environment"'));
- assert.ok(html.includes('id="exportFormat"'));
- assert.ok(html.includes('id="exportImage"'));
- assert.doesNotMatch(html,/Export settings|Import settings/);
- assert.ok(app.includes("$('#cameraCapture').addEventListener('change'"));
- assert.ok(app.includes("exportAs($('#exportFormat')?.value || 'png')"));
-});
-
-
 test('Image Studio groups capture and gallery actions above controls and uses a click export menu',()=>{
  const html=fs.readFileSync(path.join(root,'studio.html'),'utf8');
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
@@ -271,7 +259,7 @@ test('Image Studio groups capture and gallery actions above controls and uses a 
  assert.doesNotMatch(html,/cameraCapture|Choose file|exportFormat|exportImage/);
  assert.match(html,/<details class="export-menu">/);
  for(const format of ['png','jpeg','webp','svg'])assert.ok(html.includes('data-export="'+format+'"'));
- assert.match(app,/\$\$\('\.export-menu \\[data-export\\]'\)/);
+ assert.ok(app.includes("$('.export-menu [data-export]')"));
  assert.match(app,/function closePhotoCamera/);
  assert.match(app,/getUserMedia\(/);
  assert.match(app,/cameraTakePhoto/);
