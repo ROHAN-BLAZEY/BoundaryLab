@@ -17,8 +17,8 @@ function edgeAwareSmooth(gray,width,height){
 function multiScaleEdges(gray,width,height,settings){
   const low=Math.max(4,Number(settings.low)||0),high=Math.max(low+1,Number(settings.high)||low+1);
   const method=settings.edgeMethod||'canny';
-  const fine=detectEdges(gray,width,height,{...settings,edgeMethod:method,low:Math.max(4,low*.72),high:Math.max(12,high*.78)});
-  const coarse=detectEdges(smooth(gray,width,height,1),width,height,{...settings,edgeMethod:method,low:Math.max(12,low*1.25)});
+  const fine=detectEdges(gray,width,height,{...settings,autoLinkThresholds:false,edgeMethod:method,low:Math.max(4,low*.72),high:Math.max(12,high*.78)});
+  const coarse=detectEdges(smooth(gray,width,height,1),width,height,{...settings,autoLinkThresholds:false,edgeMethod:method,low:Math.max(12,low*1.25)});
   const out=fine.slice(),support=dilate(fine,width,height);
   for(let i=0;i<out.length;i++)if(coarse[i]&&support[i])out[i]=255;
   return out;
