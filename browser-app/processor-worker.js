@@ -326,9 +326,9 @@ function makeOutput(pixels, gray, edge, width, height, settings) {
         red = green = blue = isEdge ? 20 : 255;
         break;
       case 'edge-map':
-        red = isEdge ? 255 : 0;
-        green = isEdge ? 255 : 0;
-        blue = isEdge ? 255 : 0;
+        red = isEdge ? rgb[0] : 0;
+        green = isEdge ? rgb[1] : 0;
+        blue = isEdge ? rgb[2] : 0;
         break;
       case 'overlay':
         red = isEdge ? rgb[0] : adjustChannel(pixels[offset]);
