@@ -189,8 +189,10 @@ function stabilizeLiveEdges(edge, previous, width, height, strength) {
 }
 
 function detectEdges(gray, width, height, settings) {
-  const low = Math.max(0, Math.min(255, Number(settings.low)));
-  const high = Math.max(low, Math.min(255, Number(settings.high)));
+  const high = Math.max(1, Math.min(255, Number(settings.high) || 78));
+  const low = settings.autoLinkThresholds !== false
+    ? Math.max(1, Math.round(high * 0.4))
+    : Math.max(0, Math.min(high, Number(settings.low)));
   const edge = new Uint8Array(width * height);
 
   if (settings.edgeMethod === 'laplacian') {
@@ -206,8 +208,14 @@ function detectEdges(gray, width, height, settings) {
 
   const { magnitude, direction } = settings.edgeMethod === 'scharr' ? scharrMagnitude(gray, width, height) : sobelMagnitude(gray, width, height);
   const thin = thinEdges(magnitude, direction, width, height);
-  if (settings.edgeMethod === 'canny' || settings.edgeMethod === 'scharr' || settings.edgeMethod === 'sobel') return hysteresis(thin, width, height, low, high);
-  for (let i = 0; i < thin.length; i++) if (thin[i] > 0 && thin[i] >= low) edge[i] = 255;
+  if (settings.edgeMethod === 'canny' || settings.edgeMethod === 'scharr') return hysteresis(thin, width, height, low, high);
+  // Sobel is a direct strong-gradient map; unlike Canny it does not link weaker
+  // neighbours, making the two choices visibly and predictably different.
+  const cutoff = settings.edgeMethod === 'sobel' ? high : high;
+  for (let i = 0; i < magnitude.length; i++) {
+    const response = settings.edgeMethod === 'sobel' ? magnitude[i] : thin[i];
+    if (response > 0 && response >= cutoff) edge[i] = 255;
+  }
   return edge;
 }
 
@@ -376,7 +384,8 @@ self.onmessage = ({ data: job }) => {
   const adjusted = settings.autoNormalize ? normalizeContrast(adjustGrayscale(gray, settings)) : adjustGrayscale(gray, settings);
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
   const offset = Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
-  const adjustedSettings = { ...settings, low: Math.max(0, Math.min(255, Number(settings.low) + offset)), high: Math.max(1, Math.min(255, Number(settings.high) + offset)) };
+  const adjustedHigh = Math.max(1, Math.min(255, Number(settings.high) + offset));
+  const adjustedSettings = { ...settings, high: adjustedHigh, low: settings.autoLinkThresholds !== false ? Math.max(1, Math.round(adjustedHigh * 0.4)) : Math.max(0, Math.min(255, Number(settings.low) + offset)) };
   let specialized = { edge: null, tone: adjusted };
   let detected;
   let modeStyle;
