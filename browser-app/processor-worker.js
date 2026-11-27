@@ -190,9 +190,7 @@ function stabilizeLiveEdges(edge, previous, width, height, strength) {
 
 function detectEdges(gray, width, height, settings) {
   const high = Math.max(1, Math.min(255, Number(settings.high) || 78));
-  const low = settings.autoLinkThresholds === true
-    ? Math.max(1, Math.round(high * 0.4))
-    : Math.max(0, Math.min(high, Number(settings.low)));
+  const low = Math.max(0, Math.min(high, Number(settings.low) || 0));
   const edge = new Uint8Array(width * height);
 
   if (settings.edgeMethod === 'laplacian') {
@@ -385,7 +383,7 @@ self.onmessage = ({ data: job }) => {
   const smoothed = smooth(adjusted, width, height, Math.max(0, Math.min(4, Number(settings.cleanup) || 0)));
   const offset = Math.max(-80, Math.min(80, Number(settings.stencilOffset) || 0));
   const adjustedHigh = Math.max(1, Math.min(255, Number(settings.high) + offset));
-  const adjustedSettings = { ...settings, high: adjustedHigh, low: settings.autoLinkThresholds === true ? Math.max(1, Math.round(adjustedHigh * 0.4)) : Math.max(0, Math.min(255, Number(settings.low) + offset)) };
+  const adjustedSettings = { ...settings, high: adjustedHigh, low: Math.max(0, Math.min(255, Number(settings.low) + offset)), autoLinkThresholds: false };
   let specialized = { edge: null, tone: adjusted };
   let detected;
   let modeStyle;
