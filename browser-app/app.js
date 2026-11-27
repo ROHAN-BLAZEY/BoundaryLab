@@ -516,12 +516,12 @@
 
   const PRESET_KEY = 'boundarylab-local-presets-v1';
   const builtInPresets = {
-    'Clean Outline': { style: 'outline', edgeMethod: 'canny', low: 31, high: 86, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 8, rotation: 0, color: '#087967', invert: false, transparent: true, autoNormalize: true, morphology: 'off' },
-    'Detailed Outline': { style: 'outline', edgeMethod: 'canny', low: 18, high: 58, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 14, rotation: 0, color: '#087967', invert: false, transparent: true, autoNormalize: true, morphology: 'off' },
-    'Bold Outline': { style: 'outline', edgeMethod: 'canny', low: 23, high: 70, cleanup: 1, edgeThickness: 3, brightness: 0, contrast: 18, rotation: 0, color: '#087967', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
-    'Sketch Style': { style: 'coloring', edgeMethod: 'sobel', low: 34, high: 88, cleanup: 2, edgeThickness: 1, brightness: 8, contrast: 14, rotation: 0, color: '#087967', invert: false, transparent: false, autoNormalize: true, morphology: 'open' },
-    'Technical Drawing': { style: 'blueprint', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#5685ff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
-    'Stencil Style': { style: 'edge-map', edgeMethod: 'canny', low: 30, high: 86, cleanup: 2, edgeThickness: 2, brightness: 5, contrast: 32, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close-open' },
+    'Clean Outline': { workspaceMode: 'clean-outline', style: 'edge-map', edgeMethod: 'canny', low: 31, high: 86, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 8, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'off' },
+    'Detailed Outline': { workspaceMode: 'detailed-outline', style: 'edge-map', edgeMethod: 'canny', low: 18, high: 58, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 14, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'off' },
+    'Bold Outline': { workspaceMode: 'bold-outline', style: 'edge-map', edgeMethod: 'canny', low: 23, high: 70, cleanup: 1, edgeThickness: 3, brightness: 0, contrast: 18, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
+    'Sketch Style': { workspaceMode: 'sketch', style: 'sketch', edgeMethod: 'sobel', low: 34, high: 88, cleanup: 2, edgeThickness: 1, brightness: 8, contrast: 14, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'open' },
+    'Technical Drawing': { workspaceMode: 'technical-drawing', style: 'technical', edgeMethod: 'sobel', low: 42, high: 92, cleanup: 1, edgeThickness: 1, brightness: 0, contrast: 20, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close' },
+    'Stencil Style': { workspaceMode: 'stencil', style: 'edge-map', edgeMethod: 'canny', low: 30, high: 86, cleanup: 2, edgeThickness: 2, brightness: 5, contrast: 32, rotation: 0, color: '#ffffff', invert: false, transparent: false, autoNormalize: true, morphology: 'close-open' },
   };
 
   function readLocalPresets() {
