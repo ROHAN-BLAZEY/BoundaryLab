@@ -500,7 +500,8 @@ self.onmessage = ({ data: job }) => {
   const targetMode = ['clean-outline','technical-drawing','blueprint'].includes(settings.workspaceMode);
   let refined = (settings.livePreview || targetMode || Number(settings.cleanup) >= 1) ? cleanSpecks(linked, width, height, settings.livePreview ? 2 : 3) : linked;
   if (settings.livePreview) {
-    const liveMinimum = Math.max(Number(settings.minContourLength)||1, Math.round(Math.min(width,height)*0.006));\n    refined = removeShortContours(refined, width, height, liveMinimum);
+    const liveMinimum = Math.max(Number(settings.minContourLength)||1, Math.round(Math.min(width,height)*0.006));
+    refined = removeShortContours(refined, width, height, liveMinimum);
   } else {
     const contourMinimum = ({ 'clean-outline': 4, 'detailed-outline': 2, 'bold-outline': 7, 'sketch': 2, 'technical-drawing': 3, 'blueprint': 3, 'stencil': 5 })[settings.workspaceMode] || 3;
     refined = removeShortContours(refined, width, height, contourMinimum);
