@@ -40,13 +40,56 @@ function otsu(gray){
   return threshold;
 }
 function makeStencilMask(gray,width,height,offset=0){
-  const threshold=Math.max(1,Math.min(254,otsu(gray)+offset)),mask=new Uint8Array(gray.length);
-  let dark=0,light=0;for(const v of gray){if(v<threshold)dark++;else light++;}
-  const darkForeground=dark<=light;
-  for(let i=0;i<mask.length;i++)if(darkForeground?gray[i]<threshold:gray[i]>=threshold)mask[i]=255;
-  const seen=new Uint8Array(mask.length),queue=new Int32Array(mask.length),minArea=Math.max(3,Math.round(mask.length*.00006));
-  for(let start=0;start<mask.length;start++){if(!mask[start]||seen[start])continue;let head=0,tail=0;queue[tail++]=start;seen[start]=1;
-    while(head<tail){const i=queue[head++],x=i%width,y=(i-x)/width;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||xx>=width||yy<0||yy>=height||(!dx&&!dy))continue;const j=yy*width+xx;if(mask[j]&&!seen[j]){seen[j]=1;queue[tail++]=j;}}}
+  // Hybrid global/local thresholding keeps useful object structure in uneven lighting.
+  const globalThreshold=Math.max(1,Math.min(254,otsu(gray)+Number(offset||0)));
+  const integral=new Float64Array((width+1)*(height+1));
+  for(let y=1;y<=height;y++){
+    let rowSum=0;
+    for(let x=1;x<=width;x++){
+      rowSum+=gray[(y-1)*width+x-1];
+      integral[y*(width+1)+x]=integral[(y-1)*(width+1)+x]+rowSum;
+    }
+  }
+  const radius=Math.max(4,Math.min(24,Math.round(Math.min(width,height)*.035)));
+  const borderStep=Math.max(1,Math.floor(Math.min(width,height)/48));
+  let borderSum=0,borderCount=0,centerSum=0,centerCount=0;
+  for(let y=0;y<height;y+=borderStep)for(let x=0;x<width;x+=borderStep){
+    const v=gray[y*width+x];
+    if(x<radius||y<radius||x>=width-radius||y>=height-radius){borderSum+=v;borderCount++;}
+    else if(x>width*.2&&x<width*.8&&y>height*.2&&y<height*.8){centerSum+=v;centerCount++;}
+  }
+  const borderMean=borderSum/Math.max(1,borderCount),centerMean=centerSum/Math.max(1,centerCount);
+  const darkForeground=borderMean>=centerMean;
+  const mask=new Uint8Array(gray.length);
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const x1=Math.max(0,x-radius),x2=Math.min(width-1,x+radius),y1=Math.max(0,y-radius),y2=Math.min(height-1,y+radius),stride=width+1;
+    const area=(x2-x1+1)*(y2-y1+1);
+    const localSum=integral[(y2+1)*stride+x2+1]-integral[y1*stride+x2+1]-integral[(y2+1)*stride+x1]+integral[y1*stride+x1];
+    const localMean=localSum/area;
+    const threshold=Math.max(1,Math.min(254,globalThreshold*.58+localMean*.42));
+    const value=gray[y*width+x];
+    if(darkForeground?value<threshold:value>=threshold)mask[y*width+x]=255;
+  }
+  // If local contrast creates an implausibly empty/full mask, fall back to a
+  // global threshold with polarity inferred from the image border, not pixel count.
+  let foreground=0;for(const value of mask)if(value)foreground++;
+  if(foreground<gray.length*.003||foreground>gray.length*.92){
+    for(let i=0;i<mask.length;i++)mask[i]=(darkForeground?gray[i]<globalThreshold:gray[i]>=globalThreshold)?255:0;
+  }
+  const seen=new Uint8Array(mask.length),queue=new Int32Array(mask.length),minArea=Math.max(3,Math.round(mask.length*.00004));
+  for(let start=0;start<mask.length;start++){
+    if(!mask[start]||seen[start])continue;
+    let head=0,tail=0;queue[tail++]=start;seen[start]=1;
+    while(head<tail){
+      const i=queue[head++],x=i%width,y=(i-x)/width;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+        if(!dx&&!dy)continue;
+        const xx=x+dx,yy=y+dy;
+        if(xx<0||xx>=width||yy<0||yy>=height)continue;
+        const j=yy*width+xx;
+        if(mask[j]&&!seen[j]){seen[j]=1;queue[tail++]=j;}
+      }
+    }
     if(tail<minArea)for(let j=0;j<tail;j++)mask[queue[j]]=0;
   }
   return mask;
