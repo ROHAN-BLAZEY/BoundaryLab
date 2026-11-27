@@ -3,7 +3,7 @@
   const $$ = (selector) => [...document.querySelectorAll(selector)];
 
   const controlsPanel = $('.controls-panel');
-  const controlTabs = $('[data-control-tab]');
+  const controlTabs = $$('[data-control-tab]');
   function setControlMode(mode) {
     if (!controlsPanel) return;
     controlsPanel.dataset.controlMode = mode;
