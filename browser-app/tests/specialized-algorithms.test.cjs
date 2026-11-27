@@ -327,3 +327,12 @@ test('preset studio auto-tunes thresholds after loading source images',()=>{
  assert.match(source,/function autoTuneForUpload/);
  assert.match(source,/autoTuneForUpload\(\);/);\n assert.match(source,/autoTuneForUpload\(\);[^\\n]*process\(\)/);
 });
+
+test('technical drawing keeps the outer silhouette of filled CAD geometry',()=>{
+ const width=40,height=40,gray=new Uint8Array(width*height);gray.fill(248);
+ for(let y=10;y<30;y++)for(let x=12;x<28;x++)gray[y*width+x]=65;
+ const result=api.workspaceProcess(gray,width,height,{workspaceMode:'technical-drawing',low:15,high:50,edgeMethod:'sobel'});
+ assert.equal(result.edge[10*width+20],255,'top silhouette boundary should remain');
+ assert.equal(result.edge[20*width+12],255,'side silhouette boundary should remain');
+ assert.equal(result.edge[20*width+20],0,'filled interior should not become a skeleton artefact');
+});
