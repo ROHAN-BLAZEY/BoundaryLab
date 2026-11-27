@@ -806,7 +806,7 @@
     updateHistoryButtons();
     render();
   });
-  $('.export-menu [data-export]').forEach((button) => button.addEventListener('click', () => {
+  $$('.export-menu [data-export]').forEach((button) => button.addEventListener('click', () => {
     const menu = $('.export-menu');
     exportAs(button.dataset.export);
     if (menu) menu.open = false;
