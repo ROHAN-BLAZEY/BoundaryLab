@@ -30,7 +30,7 @@
         <div class="hero-actions">
           <label class="button primary upload">Open image<input id="file" type="file" accept="image/*"></label>
           <button id="sample" class="button secondary" type="button">Try sample</button>
-          <button id="camera" class="button secondary" type="button">Capture photo</button><a class="button secondary" href="/live">Open Live Studio</a>
+          <button id="camera" class="button secondary" type="button">Capture photo</button><input id="cameraCapture" class="visually-hidden" type="file" accept="image/*" capture="environment" aria-label="Capture a photo with your camera"><a class="button secondary" href="/live">Open Live Studio</a>
         </div>
         <p class="micro">JPG · PNG · WebP · GIF first frame · up to 30 MB</p>
       </div>
@@ -44,17 +44,8 @@
       <button id="galleryButton" class="button secondary compact" type="button">Gallery <span id="galleryCount">0</span></button>
       <select id="presetSelect" class="project-select" aria-label="Choose a local preset"><option value="">Presets</option></select>
       <button id="savePreset" class="button secondary compact" type="button">Save preset</button>
-      <button id="exportProject" class="button secondary compact" type="button">Export settings</button>
-      <label class="button secondary compact import-project">Import settings<input id="importProject" type="file" accept="application/json,.json"></label>
-        <details class="export-menu">
-          <summary class="button primary compact">Export <span aria-hidden="true">▾</span></summary>
-          <div class="menu">
-            <button type="button" data-export="png">PNG image</button>
-            <button type="button" data-export="jpeg">JPEG image</button>
-            <button type="button" data-export="webp">WebP image</button>
-            <button type="button" data-export="svg">SVG edge paths</button>
-          </div>
-        </details>
+      <label class="control-label export-format-label">Export format<select id="exportFormat" aria-label="Choose export format"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="svg">SVG</option></select></label>
+      <button id="exportImage" class="button primary compact" type="button">Export image</button>
       </div>
     </section>
 
