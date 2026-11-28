@@ -506,6 +506,8 @@ self.onmessage = ({ data: job }) => {
     const contourMinimum = ({ 'clean-outline': 4, 'detailed-outline': 2, 'bold-outline': 7, 'sketch': 2, 'technical-drawing': 3, 'blueprint': 3, 'stencil': 5 })[settings.workspaceMode] || 3;
     refined = removeShortContours(refined, width, height, contourMinimum);
   }
+  if (targetMode) refined = refineSceneContours(refined, width, height, settings.workspaceMode, Boolean(settings.livePreview));
+  if (targetMode) refined = bridgeContourGapsDirectional(refined, width, height, settings.livePreview ? 2 : 3);
   const edge = thickenEdges(refined, width, height, settings.edgeThickness);
   let softMask = null;
   if (settings.livePreview && Number(settings.edgeSoftness) > 0) {
