@@ -353,3 +353,21 @@ test('noise cleanup removes isolated specks while preserving long connected cont
  assert.equal(cleaned[5*width+5],0);
  for(let x=8;x<39;x++)assert.equal(cleaned[22*width+x],255);
 });
+
+
+test('scene-aware refinement removes compact specks but preserves long thin structural lines',()=>{
+ const width=80,height=64,edge=new Uint8Array(width*height);
+ edge[5*width+5]=255;edge[5*width+6]=255;edge[6*width+5]=255;
+ for(let x=12;x<68;x++)edge[32*width+x]=255;
+ const cleaned=context.refineSceneContours(edge,width,height,'technical-drawing',false);
+ assert.equal(cleaned[5*width+5],0,'compact isolated noise should be removed');
+ for(let x=12;x<68;x++)assert.equal(cleaned[32*width+x],255,'long thin structural line should remain');
+});
+
+test('scene-aware contour refinement is shared by still and live structure presets',()=>{
+ const worker=fs.readFileSync(path.join(root,'processor-worker.js'),'utf8');
+ const specialized=fs.readFileSync(path.join(root,'specialized-algorithms.js'),'utf8');
+ assert.match(specialized,/function refineSceneContours\(/);
+ assert.match(worker,/if \(targetMode\) refined = refineSceneContours\(/);
+ assert.match(worker,/if \(targetMode\) refined = bridgeContourGapsDirectional\(/);
+});
