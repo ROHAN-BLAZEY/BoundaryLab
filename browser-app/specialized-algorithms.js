@@ -223,6 +223,37 @@ function workspaceProcess(gray,width,height,settings,pixels){
   return {edge,tone};
 }
 
+
+// Scene-aware cleanup for the three structure-focused presets. It removes
+// tiny connected responses while retaining long, thin lines and intersections.
+function refineSceneContours(edge,width,height,mode,live=false){
+  if(!edge||!edge.length)return edge;
+  const minimum=Math.max(3,Math.min(live?10:18,Math.round(edge.length*(live?0.000018:0.000025))));
+  const output=edge.slice(),seen=new Uint8Array(edge.length),queue=new Int32Array(edge.length);
+  for(let start=0;start<edge.length;start++){
+    if(!edge[start]||seen[start])continue;
+    let head=0,tail=0,minX=width,minY=height,maxX=0,maxY=0;
+    queue[tail++]=start;seen[start]=1;
+    while(head<tail){
+      const index=queue[head++],x=index%width,y=(index-x)/width;
+      minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+        if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;
+        if(nx<0||nx>=width||ny<0||ny>=height)continue;
+        const next=ny*width+nx;
+        if(edge[next]&&!seen[next]){seen[next]=1;queue[tail++]=next;}
+      }
+    }
+    const span=Math.max(maxX-minX+1,maxY-minY+1);
+    // A long narrow component is likely a genuine architectural/drawing line,
+    // even when it contains relatively few pixels.
+    if(tail<minimum&&span<minimum*1.5){
+      for(let k=0;k<tail;k++)output[queue[k]]=0;
+    }
+  }
+  return output;
+}
+
 function blueprintGrid(output,width,height,settings){
   if(!settings.blueprintGrid)return;
   const step=Math.max(12,Math.round(Number(settings.gridSpacing)||32));
